@@ -11,6 +11,8 @@ Validated with JDK 17, Android SDK 36, Build Tools 35.0.0, Gradle 8.13 / AGP 8.1
 | EN / RU localization | 158 strings and 2 plural resources in each locale; no missing referenced keys |
 | Gradle distribution | Official SHA-256 verified and pinned in wrapper |
 
+Product decision: the app is fully free. Source/dependency review found no billing SDK, Premium/Pro tier, paywall, paid entitlement or viewing-time allowance. The five-minute trial previously discussed is not implemented and is excluded from the product scope. References to subscriptions in stream-access errors refer to the external IPTV provider account.
+
 The source-client tests use MockWebServer and verify authenticated Xtream Live / VOD / Series import, expired-account rejection, encoded credentials, provider-specific live output formats, episode ordering and extensions, playlist redirects, redacted access errors and payload limits.
 
 Core tests verify quoted M3U Plus metadata, relative URLs, logos and EPG, duplicate and unsafe URL filtering, VLC headers, HLS manifests, Xtream URL construction, XMLTV timezone conversion and protection against external XML entity access.
@@ -39,5 +41,5 @@ Known scope limits:
 - Google Cast sends a supported remote media URL; whole-screen mirroring is not implemented.
 - Default Cast receiver cannot receive local files or streams with custom request headers.
 - XMLTV EPG refresh is manual. Imported playlist EPG URLs are detected automatically, but guide downloads are initiated from Playlists.
-- Release signing, billing, advertising, analytics and provider subscriptions are not configured.
+- Release signing, advertising, analytics and provider services are not configured. Billing, paywalls and paid tiers are excluded by the free product model.
 - The app contains no preloaded channel package. Add your own authorized playlist or provider account.

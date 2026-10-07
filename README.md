@@ -2,6 +2,12 @@
 
 Native Kotlin / Jetpack Compose IPTV player for Android phones, tablets and TV boxes. Dark interface with mint accents, English and Russian localization. The app includes no channel package, IPTV subscription, search engine for pirated content, or promises of a fixed channel count.
 
+## Free product model
+
+All player features are free. The product has no Premium/Pro tier, paywall, app subscription, in-app purchase, trial period or five-minute viewing allowance. Playback, playlists, favorites, EPG, background playback, picture-in-picture, Cast and external-player integration are available without an app purchase. There is no paid playlist or channel quota.
+
+Keep this model in future development unless the user explicitly changes the product direction. Google Play Billing and paid-access controls are outside the current product scope. File/parser safety limits protect app stability and are unrelated to payment. IPTV provider access and any provider account requirements remain separate from the free player.
+
 ## Implemented
 
 - M3U / M3U8 / M3U Plus by URL and Android document picker; channel names, groups, logos, `tvg-id`, `url-tvg` / `x-tvg-url`, relative URLs, `#EXTGRP`, VLC User-Agent / Referer and URL header suffixes.
