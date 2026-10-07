@@ -5,8 +5,9 @@ Validated with JDK 17, Android SDK 36, Build Tools 35.0.0, Gradle 8.13 / AGP 8.1
 | Check | Result |
 | --- | --- |
 | `:core:selfTest` | PASS: 42 assertions, including 20,000-channel import, stable IDs and bounded retry policy |
-| `:app:testDebugUnitTest` | PASS: 42 tests, 0 failures, 0 errors |
+| `:app:testDebugUnitTest` | PASS: 48 tests, 0 failures, 0 errors |
 | `:app:assembleDebug` | PASS: debug APK generated |
+| `:app:compileReleaseKotlin` | PASS: release Kotlin compiled; sample catalogue contains no public-playlist URLs |
 | `:app:lintDebug` | PASS: 0 errors; non-blocking style, dependency-version and resource warnings remain |
 | Localization: 12 languages | PASS: 166 strings and 2 plural resources in each locale; no missing referenced keys; numbered parameters, required plural forms and declared languages match |
 | Gradle distribution | Official SHA-256 verified and pinned in wrapper |
@@ -38,7 +39,9 @@ A downloaded Google/Shaka HLS initialization fragment plus its first segment pas
 
 No Android emulator, physical phone, TV box, real provider account or Cast receiver was available for playback testing. Build/test success is not a claim that a provider's codecs, DRM, account limits or receiver network access work on every device. Before release, complete the device checklist in README.md, especially D-pad navigation, playback, audio focus, background notification, picture-in-picture, sleep timer and real Cast handoff.
 
-Public-playlist QA adds an optional debug-only source picker for Russia, United States and Relax from iptv-org. It uses the normal import/preview/confirmation pipeline. Release sources define an empty sample catalogue. Six new UI scenarios exercise the real source importer with a synthetic M3U served by MockWebServer: no download before choosing, confirmation-only persistence, preview cancellation, download retry, TV navigation, Arabic labels and the hidden entry for an empty catalogue. Validation of this change is pending the GitHub Actions run; previous Android results above describe the preceding localization commit.
+Public-playlist QA adds an optional debug-only source picker for Russia, United States and Relax from iptv-org. It uses the normal import/preview/confirmation pipeline. Release sources define an empty sample catalogue. Six new UI scenarios exercise the real source importer with a synthetic M3U served by MockWebServer: no download before choosing, confirmation-only persistence, preview cancellation, download retry, TV navigation, Arabic labels and the hidden entry for an empty catalogue. All checks above passed in [GitHub Actions run 37614364630](https://github.com/nikulinakate/IPTV-Player---Android/actions/runs/37614364630). Phone preview, Arabic picker and TV focus renders were visually inspected. The compiled release catalogue was inspected and contains an empty list with no iptv-org host.
+
+Manual HTTP checks on 2026-10-07 returned HTTP 200 and UTF-8 M3U files for all three sample URLs: Russia had 534 EXTINF records (103,069 bytes), United States 1,451 (317,970 bytes), and Relax 9 (2,244 bytes). These are playlist records, not verified playable-channel counts. Automated tests make no live playlist requests, and individual stream playback was not tested.
 
 Known scope limits:
 
