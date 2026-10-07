@@ -1,0 +1,1 @@
+-keep class com.sultonovmuzafar.smartiptv.playback.CastOptionsProvider { *; }

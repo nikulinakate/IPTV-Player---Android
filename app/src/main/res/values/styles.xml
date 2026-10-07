@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.SmartIPTV" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">#0C1017</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="colorAccent">#9FF3CE</item>
+    </style>
+</resources>
