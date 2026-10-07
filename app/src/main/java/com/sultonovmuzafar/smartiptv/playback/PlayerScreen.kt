@@ -36,6 +36,8 @@ import com.sultonovmuzafar.smartiptv.ui.Mint
 import com.sultonovmuzafar.smartiptv.ui.focusRing
 import com.sultonovmuzafar.smartiptv.ui.isTelevision
 import com.sultonovmuzafar.smartiptv.ui.initialFocus
+import com.sultonovmuzafar.smartiptv.ui.appLocale
+import java.util.Locale
 import kotlinx.coroutines.delay
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -165,6 +167,7 @@ import kotlinx.coroutines.delay
 }
 
 @Composable private fun TrackDialog(controller: MediaController,onClose: ()->Unit) {
+    val locale=appLocale()
     val groups=controller.currentTracks.groups.filter { it.type==C.TRACK_TYPE_AUDIO || it.type==C.TRACK_TYPE_TEXT || it.type==C.TRACK_TYPE_VIDEO }
     AlertDialog(onDismissRequest=onClose,title={Text(stringResource(R.string.tracks))},text={
         Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -175,7 +178,8 @@ import kotlinx.coroutines.delay
                 repeat(group.length) { index ->
                     val format=group.getTrackFormat(index)
                     if(group.isTrackSupported(index)) TextButton(modifier=Modifier.focusRing(),onClick={controller.trackSelectionParameters=controller.trackSelectionParameters.buildUpon().setTrackTypeDisabled(group.type,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,listOf(index))).build();onClose()}) {
-                        Text((format.label ?: format.language ?: if(format.height>0) "${format.height}p" else "${index+1}") + if(group.isTrackSelected(index)) " ✓" else "")
+                        val language=format.language?.let { Locale.forLanguageTag(it).getDisplayName(locale).ifBlank { it } }
+                        Text((format.label ?: language ?: if(format.height>0) "${format.height}p" else "${index+1}") + if(group.isTrackSelected(index)) " ✓" else "")
                     }
                 }
             }

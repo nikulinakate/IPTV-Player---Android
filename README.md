@@ -1,6 +1,6 @@
 # Smart IPTV · Android
 
-Native Kotlin / Jetpack Compose IPTV player for Android phones, tablets and TV boxes. Dark interface with mint accents, English and Russian localization. The app includes no channel package, IPTV subscription, search engine for pirated content, or promises of a fixed channel count.
+Native Kotlin / Jetpack Compose IPTV player for Android phones, tablets and TV boxes. Dark interface with mint accents and localization in 12 languages. The app includes no channel package, IPTV subscription, search engine for pirated content, or promises of a fixed channel count.
 
 ## Free product model
 
@@ -27,11 +27,22 @@ Keep this model in future development unless the user explicitly changes the pro
 - Adaptive side navigation on TV and wide tablets, larger TV type, visible focus outlines and initial focus after layout attachment. D-pad activation is covered in local Compose tests; real remote/receiver behavior still requires hardware. Player control lock blocks channel keys and focuses the unlock action on TV.
 - Android Keystore AES-GCM encryption for provider credentials, stream URLs and request headers; disabled device backups; no source credentials in logs or error messages.
 
+## Localization
+
+Complete app resources (158 strings and 2 plural resources per locale) are available in English, Russian, Spanish, German, French, Brazilian Portuguese, Italian, Japanese, Korean, Simplified Chinese, Turkish and Arabic. Onboarding artwork labels, source connection, library, settings, playback tools, accessibility labels and errors use the same resources. Provider titles, categories and programme descriptions retain their original language.
+
+The interface follows the device language. On Android 13+, choose a different app language in Android Settings → Apps → Smart IPTV → Language. `locale_config.xml` declares only fully translated app locales; English is the fallback. There is no custom in-app language selector. Android 8–12 follow the system language.
+
+Arabic uses mirrored layouts and six quantity forms; URL and EPG input remain left-to-right. Dates, times, resume positions and track-language names use the active app locale, including when it differs from the system language. Settings text can scroll, and onboarding artwork leaves space for long translated labels.
+
+`python3 Scripts/check-localization.py` checks resource parity, numbered format arguments, required plural forms and the declared languages. The same check runs in CI and `Scripts/validate.sh`. Runtime tests verify packaged resource selection for all 12 locales, including Simplified Chinese in China/Singapore and Arabic quantities. UI tests cover German on a 320 dp phone, Japanese, Arabic source entry and right-to-left TV navigation. Preview renders are included in the CI UI artifact. Translations have not been reviewed by native speakers; real-device font and large-text checks remain on the release checklist.
+
 ## Build
 
 Use Android Studio with **JDK 17**, Android SDK **36** and build tools **35.0.0**. Package/application ID: `com.sultonovmuzafar.smartiptv`.
 
 ```bash
+python3 Scripts/check-localization.py
 ./gradlew :core:selfTest :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
 ```
 
@@ -58,5 +69,6 @@ The executable suite checks M3U Plus metadata and headers, duplicate/invalid fil
 9. Install on a TV box; verify D-pad focus, selection, Back, source entry and player controls with the actual remote. Check onboarding action focus, side-menu navigation, focus outlines and unlocking with the remote after locking the player.
 10. During Live and VOD playback, toggle Wi-Fi/network access. Check recovery, VOD position, pause/cancel during recovery, the five-attempt limit, sleep timer and manual retry. Confirm 401/403, 404, codec and DRM failures do not retry indefinitely.
 11. Use previous/next and remote channel keys; check group boundaries, wrapping, title/EPG/Cast metadata, rapid changes and return from PiP. Import a large playlist, search Cyrillic names and literal `%` / `_`, scroll through multiple pages and remove a source during playback.
+12. Switch through all supported languages; on Android 13+ change the app language while keeping the device in English. Check onboarding, import, errors, settings, EPG dates, subtitle/audio selection and notification controls. In Arabic, check right-to-left navigation, mixed-language titles, URL editing and quantities 0/1/2/3/11/100. Repeat with large system text and on a physical TV remote.
 
 See [QA.md](QA.md) for validation status and remaining device checks. Safety limits are 50 MB downloaded playlists, 100 MB unpacked EPG, 100,000 parsed M3U channels and 250,000 upcoming guide programmes; there is no paid playlist quota.

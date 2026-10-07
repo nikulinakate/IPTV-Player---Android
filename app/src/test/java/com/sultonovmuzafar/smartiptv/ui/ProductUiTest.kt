@@ -4,6 +4,12 @@ import android.graphics.Bitmap
 import androidx.compose.ui.platform.ViewRootForTest
 import android.graphics.Canvas
 import androidx.compose.ui.input.key.Key
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.lifecycle.ViewModelStore
@@ -101,5 +107,63 @@ class ProductUiTest {
         compose.setContent { IPTVTheme { OnboardingScreen {} } }
         compose.onNodeWithText("Продолжить").performClick();compose.onNodeWithText("Продолжить").performClick()
         compose.onNodeWithText("Подключить мой плейлист").assertIsDisplayed();screenshot("phone-onboarding-cast-ru")
+    }
+    private fun assertTextFits(text: String) {
+        val results=mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText(text).assertIsDisplayed().performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
+        assertTrue(results.isNotEmpty())
+        val layout=results.first()
+        // Paragraph width can reserve the whole available width for RTL/CJK while the
+        // Text node wraps its glyphs. Check rendered lines rather than that reservation.
+        assertFalse("Clipped text height: $text",layout.didOverflowHeight)
+        assertFalse("Missing text lines: $text",layout.multiParagraph.didExceedMaxLines)
+        repeat(layout.lineCount) { line ->
+            assertFalse("Ellipsized text: $text",layout.isLineEllipsized(line))
+            assertTrue("Clipped text width: $text",layout.getLineRight(line)-layout.getLineLeft(line)<=layout.size.width+1f)
+        }
+    }
+    @Test @Config(qualifiers="de-w320dp-h640dp-mdpi")
+    fun germanOnboardingFinalActionFitsASmallPhone() {
+        compose.setContent { IPTVTheme { OnboardingScreen {} } }
+        compose.onNodeWithText("Weiter").performClick();compose.onNodeWithText("Weiter").performClick()
+        assertTextFits("Meine Playlist verbinden");screenshot("phone-onboarding-cast-de")
+    }
+    @Test @Config(qualifiers="ja-w411dp-h891dp-mdpi")
+    fun japaneseOnboardingUsesLocalizedArtworkAndActions() {
+        compose.setContent { IPTVTheme { OnboardingScreen {} } }
+        compose.onNodeWithText("あなたのライブラリ").assertIsDisplayed()
+        compose.onNodeWithText("次へ").performClick();compose.onNodeWithText("次へ").performClick()
+        assertTextFits("プレイリストを接続");screenshot("phone-onboarding-cast-ja")
+    }
+    @Test @Config(qualifiers="ar-ldrtl-w411dp-h891dp-mdpi")
+    fun arabicOnboardingMirrorsLayoutAndKeepsFinalActionVisible() {
+        var direction=LayoutDirection.Ltr
+        compose.setContent { val value=LocalLayoutDirection.current;SideEffect { direction=value };IPTVTheme { OnboardingScreen {} } }
+        compose.onNodeWithText("متابعة").performClick();compose.onNodeWithText("متابعة").performClick()
+        assertEquals(LayoutDirection.Rtl,direction);assertTextFits("ربط قائمتي");screenshot("phone-onboarding-cast-ar")
+    }
+    @Test @Config(qualifiers="ar-ldrtl-w411dp-h891dp-mdpi")
+    fun arabicSourceEntryKeepsUrlLeftToRightAndCanPreview() = withModel { model,db ->
+        compose.setContent { IPTVTheme { AddSourceDialog(model) {} } }
+        compose.onNodeWithText("فتح بث واحد").performClick()
+        val url="https://example.test/live.m3u8?user=demo&token=abc"
+        compose.onNodeWithText("الرابط").performTextInput(url)
+        val results=mutableListOf<TextLayoutResult>()
+        compose.onNode(hasSetTextAction() and hasText(url)).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
+        assertEquals(TextDirection.Ltr,results.first().layoutInput.style.textDirection)
+        screenshot("phone-source-details-ar")
+        compose.onNodeWithText("معاينة المصدر").performClick()
+        assertTextFits("إضافة إلى مكتبتي");assertTrue(db.sources().isEmpty());screenshot("phone-source-preview-ar")
+    }
+    @Test @Config(qualifiers="ar-ldrtl-w1280dp-h720dp-land-television-mdpi")
+    fun arabicTelevisionNavigationMirrorsAndRemainsFocused() = withModel { model,db ->
+        prepareLibrary(model,db)
+        compose.setContent { IPTVTheme { LibraryScreen(model) } }
+        val node=compose.onNodeWithText("شاهد").assertIsFocused().fetchSemanticsNode()
+        assertTrue("Navigation should be on the right",node.boundsInRoot.center.x>640f)
+        screenshot("tv-library-ar")
+        compose.onNodeWithText("شاهد").performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNodeWithText("المفضلة").assertIsFocused().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.onNodeWithText("قنواتك وعناوينك المحفوظة").assertIsDisplayed()
     }
 }

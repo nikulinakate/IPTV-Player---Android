@@ -56,7 +56,7 @@ import com.sultonovmuzafar.smartiptv.playback.CastSupport
             Column(Modifier.weight(1f).padding(horizontal=12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                 Text(channel.name,maxLines=2,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.SemiBold)
                 Text(channel.group.ifEmpty { stringResource(kindLabel(channel.kind)) },style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
-                if(channel.position>0 && channel.kind !in listOf("LIVE","SERIES","IMAGE")) Text(stringResource(R.string.resume_at,playbackTime(channel.position)),style=MaterialTheme.typography.labelSmall,color=Mint)
+                if(channel.position>0 && channel.kind !in listOf("LIVE","SERIES","IMAGE")) Text(stringResource(R.string.resume_at,resumeTime(channel.position)),style=MaterialTheme.typography.labelSmall,color=Mint)
             }
             if(channel.kind=="LIVE") IconButton(onClick=onGuide,modifier=Modifier.size(48.dp).focusRing()) { Icon(Icons.AutoMirrored.Rounded.EventNote,stringResource(R.string.guide),tint=MaterialTheme.colorScheme.onSurfaceVariant) }
             IconButton(onClick=onFavorite,modifier=Modifier.size(48.dp).focusRing()) { Icon(if(channel.favorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,stringResource(if(channel.favorite) R.string.remove_favorite else R.string.add_favorite),tint=if(channel.favorite) Mint else MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -73,7 +73,7 @@ import com.sultonovmuzafar.smartiptv.playback.CastSupport
                         Icon(Icons.Rounded.PlayCircle,null,tint=Mint,modifier=Modifier.size(36.dp))
                         Column(Modifier.weight(1f).padding(start=12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                             Text(channel.name,maxLines=2,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.SemiBold)
-                            Text(stringResource(R.string.resume_at,playbackTime(channel.position)),style=MaterialTheme.typography.labelMedium,color=Mint)
+                            Text(stringResource(R.string.resume_at,resumeTime(channel.position)),style=MaterialTheme.typography.labelMedium,color=Mint)
                         }
                     }
                 }

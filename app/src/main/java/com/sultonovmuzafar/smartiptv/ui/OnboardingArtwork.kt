@@ -35,11 +35,11 @@ import com.sultonovmuzafar.smartiptv.R
                 Surface(shape=RoundedCornerShape(20.dp),color=Canvas,modifier=Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(20.dp),verticalAlignment=Alignment.CenterVertically) {
                         BrandMark(48)
-                        Column(Modifier.padding(start=14.dp)) {
+                        Column(Modifier.weight(1f).padding(horizontal=14.dp)) {
                             Text(stringResource(R.string.art_your_library),fontWeight=FontWeight.Bold)
                             Text(stringResource(R.string.art_ready_to_watch),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Spacer(Modifier.weight(1f));Icon(Icons.Rounded.CheckCircle,null,tint=Mint)
+                        Icon(Icons.Rounded.CheckCircle,null,tint=Mint)
                     }
                 }
             }

@@ -18,6 +18,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.unit.dp
+import androidx.core.text.BidiFormatter
+import androidx.core.text.TextDirectionHeuristicsCompat
+import java.util.Locale
 
 @Composable fun isTelevision(): Boolean =
     (LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK) == Configuration.UI_MODE_TYPE_TELEVISION ||
@@ -42,8 +45,15 @@ fun Modifier.initialFocus(requester: FocusRequester,enabled: Boolean,key: Any?=U
     }
 }
 
-fun playbackTime(position: Long): String {
+@Composable fun appLocale(): Locale = LocalConfiguration.current.locales[0]
+
+@Composable fun resumeTime(position: Long): String {
+    val locale=appLocale()
+    return BidiFormatter.getInstance(locale).unicodeWrap(playbackTime(position,locale),TextDirectionHeuristicsCompat.LTR)
+}
+
+fun playbackTime(position: Long,locale: Locale=Locale.getDefault()): String {
     val seconds=position.coerceAtLeast(0)/1000
-    return if(seconds>=3600) "%d:%02d:%02d".format(seconds/3600,seconds/60%60,seconds%60)
-    else "%d:%02d".format(seconds/60,seconds%60)
+    return if(seconds>=3600) String.format(locale,"%d:%02d:%02d",seconds/3600,seconds/60%60,seconds%60)
+    else String.format(locale,"%d:%02d",seconds/60,seconds%60)
 }

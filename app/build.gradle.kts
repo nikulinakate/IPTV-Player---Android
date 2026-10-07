@@ -14,6 +14,7 @@ android {
         versionName = "1.0.0"
     }
     buildFeatures { compose = true }
+    androidResources { localeFilters += listOf("en","ru","es","de","fr","pt-rBR","it","ja","ko","b+zh+Hans","tr","ar") }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17; isCoreLibraryDesugaringEnabled = true }
     kotlinOptions { jvmTarget = "17" }
     testOptions {

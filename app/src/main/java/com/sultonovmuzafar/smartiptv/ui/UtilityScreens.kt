@@ -24,7 +24,7 @@ import java.util.Date
     var background by remember { mutableStateOf(prefs.getBoolean("background",false)) }
     var pip by remember { mutableStateOf(prefs.getBoolean("pip",false)) }
     AlertDialog(onDismissRequest=onClose,title={Text(stringResource(R.string.settings))},text={
-        Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically) { Text(stringResource(R.string.background_playback),Modifier.weight(1f)); Switch(background,modifier=Modifier.focusRing(),onCheckedChange={background=it;prefs.edit().putBoolean("background",it).apply()}) }
             Row(verticalAlignment=Alignment.CenterVertically) { Text(stringResource(R.string.auto_pip),Modifier.weight(1f)); Switch(pip,modifier=Modifier.focusRing(),onCheckedChange={pip=it;prefs.edit().putBoolean("pip",it).apply()}) }
             HorizontalDivider()
@@ -45,7 +45,8 @@ import java.util.Date
     },confirmButton={TextButton(modifier=Modifier.focusRing(),onClick=onClose) { Text(stringResource(R.string.done)) }})
 }
 @Composable fun GuideDialog(channel: Channel?,programmes: List<Programme>,onClose: ()->Unit) {
-    val formatter=remember { DateFormat.getTimeInstance(DateFormat.SHORT) }
+    val locale=appLocale()
+    val formatter=remember(locale) { DateFormat.getTimeInstance(DateFormat.SHORT,locale) }
     AlertDialog(onDismissRequest=onClose,title={Text(channel?.name ?: stringResource(R.string.guide))},text={
         if(programmes.isEmpty()) Text(stringResource(R.string.epg_empty))
         else LazyColumn(Modifier.heightIn(max=450.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {

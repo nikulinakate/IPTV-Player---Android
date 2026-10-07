@@ -5,10 +5,10 @@ Validated with JDK 17, Android SDK 36, Build Tools 35.0.0, Gradle 8.13 / AGP 8.1
 | Check | Result |
 | --- | --- |
 | `:core:selfTest` | PASS: 42 assertions, including 20,000-channel import, stable IDs and bounded retry policy |
-| `:app:testDebugUnitTest` | PASS: 34 tests, 0 failures, 0 errors |
+| `:app:testDebugUnitTest` | PASS: 42 tests, 0 failures, 0 errors |
 | `:app:assembleDebug` | PASS: debug APK generated |
 | `:app:lintDebug` | PASS: 0 errors; non-blocking style, dependency-version and resource warnings remain |
-| EN / RU localization | 158 strings and 2 plural resources in each locale; no missing referenced keys |
+| Localization: 12 languages | PASS: 158 strings and 2 plural resources in each locale; no missing referenced keys; numbered parameters, required plural forms and declared languages match |
 | Gradle distribution | Official SHA-256 verified and pinned in wrapper |
 
 Product decision: the app is fully free. Source/dependency review found no billing SDK, Premium/Pro tier, paywall, paid entitlement or viewing-time allowance. The five-minute trial previously discussed is not implemented and is excluded from the product scope. References to subscriptions in stream-access errors refer to the external IPTV provider account.
@@ -22,6 +22,8 @@ Robolectric tests exercise SQLite paging with no secret reads, single-channel re
 Product-flow tests verify that draft preparation/cancellation does not write a source, late cancelled results do not replace a newer draft, repeated confirmation does not duplicate a source, validation errors can be corrected and local/video imports select the correct destination. Resume queries return at most eight metadata-only unfinished videos/movies/episodes and exclude Live TV, images and completed titles.
 
 Compose tests exercise onboarding forward/back/final confirmation, source-preview confirmation and D-pad activation of onboarding actions and the TV side menu. Phone library/resume placement and Russian final onboarding CTA visibility are also checked. Preview images are rendered with Robolectric native graphics via the Compose host view at 411×891 phone and 1280×720 TV configurations. These are framework renders for layout inspection, not emulator/device captures. CI uploads them as `smart-iptv-ui-preview`.
+
+Localization covers EN, RU, ES, DE, FR, PT-BR, IT, JA, KO, ZH-Hans, TR and AR. Runtime resource tests resolve the final onboarding action in all 12 packaged locales, check Chinese selection in China/Singapore, Arabic zero/one/two/few/many/other quantities and locale-aware resume digits. Additional native UI tests verify German onboarding at 320×640, Japanese artwork/actions, Arabic onboarding direction, left-to-right URL input inside the Arabic form, localized source preview and D-pad selection in the mirrored TV rail. Visible CTA lines are checked for height overflow, truncation and line width rather than the paragraph's reserved layout width. Preview renders for these cases were visually inspected. Native-speaker translation review and real-device large-text/font checks remain outstanding.
 
 Catalogue measurements from one successful local test run:
 

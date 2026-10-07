@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -149,14 +150,14 @@ private val sourceOptions=listOf(
     Text(stringResource(option.title),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
     Text(stringResource(option.body),color=MaterialTheme.colorScheme.onSurfaceVariant)
     OutlinedTextField(name,onName,modifier=Modifier.fillMaxWidth().focusRing(),label={Text(stringResource(R.string.source_name))},placeholder={Text(stringResource(R.string.my_playlist))},singleLine=true,enabled=!busy,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Next))
-    if(type!="file" && type!="media") OutlinedTextField(url,onUrl,modifier=Modifier.fillMaxWidth().focusRing(),label={Text(stringResource(if(type=="xtream") R.string.server_url else R.string.url))},placeholder={Text("https://…")},singleLine=true,enabled=!busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Uri,imeAction=ImeAction.Next))
+    if(type!="file" && type!="media") OutlinedTextField(url,onUrl,textStyle=LocalTextStyle.current.copy(textDirection=TextDirection.Ltr),modifier=Modifier.fillMaxWidth().focusRing(),label={Text(stringResource(if(type=="xtream") R.string.server_url else R.string.url))},placeholder={Text("https://…",style=LocalTextStyle.current.copy(textDirection=TextDirection.Ltr))},singleLine=true,enabled=!busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Uri,imeAction=ImeAction.Next))
     if(type=="xtream") {
         OutlinedTextField(user,onUser,modifier=Modifier.fillMaxWidth().focusRing(),label={Text(stringResource(R.string.username))},singleLine=true,enabled=!busy,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Next))
         OutlinedTextField(password,onPassword,modifier=Modifier.fillMaxWidth().focusRing(),label={Text(stringResource(R.string.password))},singleLine=true,enabled=!busy,visualTransformation=if(showPassword) VisualTransformation.None else PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,imeAction=ImeAction.Done),trailingIcon={IconButton(onClick=onShowPassword,modifier=Modifier.focusRing()) { Icon(if(showPassword) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,stringResource(R.string.show_password)) }})
     }
     if(type=="url" || type=="file") {
         Text(stringResource(R.string.epg_explanation),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(epg,onEpg,modifier=Modifier.fillMaxWidth().focusRing(),label={Text(stringResource(R.string.epg_optional))},singleLine=true,enabled=!busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Uri,imeAction=ImeAction.Done))
+        OutlinedTextField(epg,onEpg,textStyle=LocalTextStyle.current.copy(textDirection=TextDirection.Ltr),modifier=Modifier.fillMaxWidth().focusRing(),label={Text(stringResource(R.string.epg_optional))},singleLine=true,enabled=!busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Uri,imeAction=ImeAction.Done))
     }
     if(type=="file" || type=="media") Surface(color=Panel,shape=RoundedCornerShape(16.dp)) { Text(stringResource(R.string.document_import_help),Modifier.padding(16.dp),style=MaterialTheme.typography.bodyMedium) }
 }

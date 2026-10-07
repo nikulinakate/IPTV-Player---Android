@@ -12,13 +12,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.sultonovmuzafar.smartiptv.R
 import com.sultonovmuzafar.smartiptv.data.Source
 import java.text.DateFormat
 import java.util.Date
+import androidx.core.text.BidiFormatter
 
 @Composable fun SourceScreen(state: LibraryState,model: LibraryViewModel,onAdd: ()->Unit) {
+    val locale=appLocale()
+    val formatter=remember(locale) { DateFormat.getDateTimeInstance(DateFormat.SHORT,DateFormat.SHORT,locale) }
     var deleting by remember { mutableStateOf<Source?>(null) }
     var editingEpg by remember { mutableStateOf<Source?>(null) }
     var epgUrl by remember { mutableStateOf("") }
@@ -31,8 +35,9 @@ import java.util.Date
             items(state.sources,key={it.id}) { source ->
                 Card { Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Text(source.name,style=MaterialTheme.typography.titleLarge)
-                    Text("${source.type.uppercase()} · ${itemCount(source.count)}",color=Mint,style=MaterialTheme.typography.labelLarge)
-                    Text(stringResource(R.string.updated_at,DateFormat.getDateTimeInstance(DateFormat.SHORT,DateFormat.SHORT).format(Date(source.updated))),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    val sourceType=when(source.type) { "url"->"M3U / M3U8";"xtream"->"Xtream Codes";"file"->stringResource(R.string.playlist_file);"stream"->stringResource(R.string.single_stream);else->stringResource(R.string.media) }
+                    Text("$sourceType · ${itemCount(source.count)}",color=Mint,style=MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.updated_at,formatter.format(Date(source.updated))),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Row {
                         TextButton(enabled=!state.busy,modifier=Modifier.focusRing(),onClick={model.refresh(source)}) { Icon(Icons.Rounded.Refresh,null,Modifier.size(18.dp)); Text(stringResource(R.string.refresh)) }
                         if(source.type!="stream" && source.type!="media") TextButton(enabled=!state.busy,modifier=Modifier.focusRing(),onClick={
@@ -47,6 +52,6 @@ import java.util.Date
             if(state.sources.isEmpty()) item { EmptyState(Icons.AutoMirrored.Rounded.PlaylistAdd,stringResource(R.string.empty_title),stringResource(R.string.empty_body)) }
         }
     }
-    deleting?.let { source -> AlertDialog(onDismissRequest={deleting=null},title={Text(stringResource(R.string.delete_playlist))},text={Text(stringResource(R.string.delete_confirm,source.name))},confirmButton={TextButton(modifier=Modifier.focusRing(),onClick={model.remove(source);deleting=null}) { Text(stringResource(R.string.delete)) }},dismissButton={TextButton(modifier=Modifier.focusRing(),onClick={deleting=null}) { Text(stringResource(R.string.cancel)) }}) }
-    editingEpg?.let { source -> AlertDialog(onDismissRequest={editingEpg=null},title={Text(stringResource(R.string.epg))},text={OutlinedTextField(epgUrl,{epgUrl=it},label={Text(stringResource(R.string.xmltv_url))},singleLine=true)},confirmButton={TextButton(enabled=epgUrl.isNotBlank(),modifier=Modifier.focusRing(),onClick={model.updateEpg(source,epgUrl);editingEpg=null}) { Text(stringResource(R.string.save)) }},dismissButton={TextButton(modifier=Modifier.focusRing(),onClick={editingEpg=null}) { Text(stringResource(R.string.cancel)) }}) }
+    deleting?.let { source -> AlertDialog(onDismissRequest={deleting=null},title={Text(stringResource(R.string.delete_playlist))},text={Text(stringResource(R.string.delete_confirm,BidiFormatter.getInstance(locale).unicodeWrap(source.name)))},confirmButton={TextButton(modifier=Modifier.focusRing(),onClick={model.remove(source);deleting=null}) { Text(stringResource(R.string.delete)) }},dismissButton={TextButton(modifier=Modifier.focusRing(),onClick={deleting=null}) { Text(stringResource(R.string.cancel)) }}) }
+    editingEpg?.let { source -> AlertDialog(onDismissRequest={editingEpg=null},title={Text(stringResource(R.string.epg))},text={OutlinedTextField(epgUrl,{epgUrl=it},textStyle=LocalTextStyle.current.copy(textDirection=TextDirection.Ltr),label={Text(stringResource(R.string.xmltv_url))},singleLine=true)},confirmButton={TextButton(enabled=epgUrl.isNotBlank(),modifier=Modifier.focusRing(),onClick={model.updateEpg(source,epgUrl);editingEpg=null}) { Text(stringResource(R.string.save)) }},dismissButton={TextButton(modifier=Modifier.focusRing(),onClick={editingEpg=null}) { Text(stringResource(R.string.cancel)) }}) }
 }
