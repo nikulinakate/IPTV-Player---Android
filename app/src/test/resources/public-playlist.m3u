@@ -1,0 +1,5 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="qa-news" group-title="News",QA News
+https://example.test/qa-news.m3u8
+#EXTINF:-1 tvg-id="qa-relax" group-title="Relax",QA Relax
+https://example.test/qa-relax.m3u8

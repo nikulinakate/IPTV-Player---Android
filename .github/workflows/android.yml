@@ -23,7 +23,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
       - run: python3 Scripts/check-localization.py
-      - run: ./gradlew :core:selfTest :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
+      - run: ./gradlew :core:selfTest :app:testDebugUnitTest :app:assembleDebug :app:compileReleaseKotlin :app:lintDebug
       - uses: actions/upload-artifact@v4
         with:
           name: smart-iptv-debug
@@ -33,3 +33,11 @@ jobs:
         with:
           name: smart-iptv-ui-preview
           path: app/build/reports/ui/*.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smart-iptv-test-reports
+          path: |
+            app/build/test-results/testDebugUnitTest/*.xml
+            app/build/reports/lint-results-debug.xml
+            app/build/tmp/kotlin-classes/release/com/sultonovmuzafar/smartiptv/ui/PublicPlaylistCatalog.class

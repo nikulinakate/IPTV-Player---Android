@@ -164,4 +164,12 @@
     <plurals name="category_count">
         <item quantity="other">%1$dカテゴリ</item>
     </plurals>
+    <string name="public_playlists_action">公開プレイリストを試す</string>
+    <string name="public_playlists_title">公開プレイリストを選択</string>
+    <string name="public_playlists_body">GitHubのiptv-orgが公開するサンプルです。リストを選ぶと、ダウンロードしてチャンネルを確認できます。</string>
+    <string name="public_playlists_notice">公開プレイリストは変更されます。一部のチャンネルは利用できない場合や、地域によって制限される場合があります。</string>
+    <string name="public_playlist_russia">ロシア</string>
+    <string name="public_playlist_usa">アメリカ</string>
+    <string name="public_playlist_relax">リラックス</string>
+    <string name="public_playlist_name">iptv-org · %1$s</string>
 </resources>

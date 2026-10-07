@@ -29,7 +29,7 @@ Keep this model in future development unless the user explicitly changes the pro
 
 ## Localization
 
-Complete app resources (158 strings and 2 plural resources per locale) are available in English, Russian, Spanish, German, French, Brazilian Portuguese, Italian, Japanese, Korean, Simplified Chinese, Turkish and Arabic. Onboarding artwork labels, source connection, library, settings, playback tools, accessibility labels and errors use the same resources. Provider titles, categories and programme descriptions retain their original language.
+Complete app resources (166 strings and 2 plural resources per locale) are available in English, Russian, Spanish, German, French, Brazilian Portuguese, Italian, Japanese, Korean, Simplified Chinese, Turkish and Arabic. Onboarding artwork labels, source connection, library, settings, playback tools, accessibility labels and errors use the same resources. Provider titles, categories and programme descriptions retain their original language.
 
 The interface follows the device language. On Android 13+, choose a different app language in Android Settings → Apps → Smart IPTV → Language. `locale_config.xml` declares only fully translated app locales; English is the fallback. There is no custom in-app language selector. Android 8–12 follow the system language.
 
@@ -37,13 +37,29 @@ Arabic uses mirrored layouts and six quantity forms; URL and EPG input remain le
 
 `python3 Scripts/check-localization.py` checks resource parity, numbered format arguments, required plural forms and the declared languages. The same check runs in CI and `Scripts/validate.sh`. Runtime tests verify packaged resource selection for all 12 locales, including Simplified Chinese in China/Singapore and Arabic quantities. UI tests cover German on a 320 dp phone, Japanese, Arabic source entry and right-to-left TV navigation. Preview renders are included in the CI UI artifact. Translations have not been reviewed by native speakers; real-device font and large-text checks remain on the release checklist.
 
+## Public playlists for manual QA
+
+Debug builds offer **Add a source → Try a public playlist → Russia / United States / Relax → preview → Add to my library**. Selecting a sample downloads the M3U using the normal source importer. The preview shows channel/category counts and sample titles; nothing is saved until confirmation. Back, cancellation and failed downloads do not save a source. A failed download leaves the URL form available for correction/retry. There is no automatic download at app launch or playback of preview entries.
+
+The sample catalogue lives in `app/src/debug/java/.../PublicPlaylistCatalog.kt`. The release source set supplies an empty catalogue, so the public-playlist button and predefined URLs are excluded from the release variant. CI compiles both variants and uploads the release catalogue class with test reports. The rest of the player remains fully free.
+
+The upstream project is [iptv-org/iptv](https://github.com/iptv-org/iptv); its [playlist directory](https://github.com/iptv-org/iptv/blob/master/PLAYLISTS.md) lists these URLs:
+
+| Sample | M3U URL |
+| --- | --- |
+| Russia | https://iptv-org.github.io/iptv/countries/ru.m3u |
+| United States | https://iptv-org.github.io/iptv/countries/us.m3u |
+| Relax | https://iptv-org.github.io/iptv/categories/relax.m3u |
+
+These are community-maintained external sources; individual channels can change, fail or have region restrictions. Playlist download/parse success does not establish playback or Cast compatibility. Use content you are authorized to access. Automated tests serve the repository's small synthetic `app/src/test/resources/public-playlist.m3u` through MockWebServer, without calling GitHub or any live channel. They cover deferred download, preview-before-save, cancellation, retry, localized selection, TV remote navigation and hiding the entry when the catalogue is empty.
+
 ## Build
 
 Use Android Studio with **JDK 17**, Android SDK **36** and build tools **35.0.0**. Package/application ID: `com.sultonovmuzafar.smartiptv`.
 
 ```bash
 python3 Scripts/check-localization.py
-./gradlew :core:selfTest :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
+./gradlew :core:selfTest :app:testDebugUnitTest :app:assembleDebug :app:compileReleaseKotlin :app:lintDebug
 ```
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`. Release signing keys are deliberately not stored in the repository.
@@ -70,5 +86,6 @@ The executable suite checks M3U Plus metadata and headers, duplicate/invalid fil
 10. During Live and VOD playback, toggle Wi-Fi/network access. Check recovery, VOD position, pause/cancel during recovery, the five-attempt limit, sleep timer and manual retry. Confirm 401/403, 404, codec and DRM failures do not retry indefinitely.
 11. Use previous/next and remote channel keys; check group boundaries, wrapping, title/EPG/Cast metadata, rapid changes and return from PiP. Import a large playlist, search Cyrillic names and literal `%` / `_`, scroll through multiple pages and remove a source during playback.
 12. Switch through all supported languages; on Android 13+ change the app language while keeping the device in English. Check onboarding, import, errors, settings, EPG dates, subtitle/audio selection and notification controls. In Arabic, check right-to-left navigation, mixed-language titles, URL editing and quantities 0/1/2/3/11/100. Repeat with large system text and on a physical TV remote.
+13. In a debug build, open the public-playlist picker. Select Relax, inspect the preview, go back twice and confirm that the library remains unchanged. Select a list again, confirm the import, then test a reachable channel, favorites, search, refresh and Cast on your device. Check an offline/failed download and retry. Release builds should offer only the normal source connection methods.
 
 See [QA.md](QA.md) for validation status and remaining device checks. Safety limits are 50 MB downloaded playlists, 100 MB unpacked EPG, 100,000 parsed M3U channels and 250,000 upcoming guide programmes; there is no paid playlist quota.

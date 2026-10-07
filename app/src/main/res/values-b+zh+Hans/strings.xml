@@ -164,4 +164,12 @@
     <plurals name="category_count">
         <item quantity="other">%1$d 个分类</item>
     </plurals>
+    <string name="public_playlists_action">试用公开播放列表</string>
+    <string name="public_playlists_title">选择公开播放列表</string>
+    <string name="public_playlists_body">这些示例播放列表来自 GitHub 上的 iptv-org。选择一个列表，即可下载并预览频道。</string>
+    <string name="public_playlists_notice">社区播放列表会不断变化。部分频道可能无法使用，或在你所在地区受到限制。</string>
+    <string name="public_playlist_russia">俄罗斯</string>
+    <string name="public_playlist_usa">美国</string>
+    <string name="public_playlist_relax">放松</string>
+    <string name="public_playlist_name">iptv-org · %1$s</string>
 </resources>

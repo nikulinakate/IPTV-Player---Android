@@ -8,7 +8,7 @@ Validated with JDK 17, Android SDK 36, Build Tools 35.0.0, Gradle 8.13 / AGP 8.1
 | `:app:testDebugUnitTest` | PASS: 42 tests, 0 failures, 0 errors |
 | `:app:assembleDebug` | PASS: debug APK generated |
 | `:app:lintDebug` | PASS: 0 errors; non-blocking style, dependency-version and resource warnings remain |
-| Localization: 12 languages | PASS: 158 strings and 2 plural resources in each locale; no missing referenced keys; numbered parameters, required plural forms and declared languages match |
+| Localization: 12 languages | PASS: 166 strings and 2 plural resources in each locale; no missing referenced keys; numbered parameters, required plural forms and declared languages match |
 | Gradle distribution | Official SHA-256 verified and pinned in wrapper |
 
 Product decision: the app is fully free. Source/dependency review found no billing SDK, Premium/Pro tier, paywall, paid entitlement or viewing-time allowance. The five-minute trial previously discussed is not implemented and is excluded from the product scope. References to subscriptions in stream-access errors refer to the external IPTV provider account.
@@ -37,6 +37,8 @@ These are desktop Robolectric SQLite measurements with an injected test vault. T
 A downloaded Google/Shaka HLS initialization fragment plus its first segment passed local `ffprobe` inspection as H.264, 192×144. This checks the sample container only; Android playback still needs a device. The GitHub SDK-install step was updated to use the runner's installed command-line tools instead of requesting the obsolete `tools` package.
 
 No Android emulator, physical phone, TV box, real provider account or Cast receiver was available for playback testing. Build/test success is not a claim that a provider's codecs, DRM, account limits or receiver network access work on every device. Before release, complete the device checklist in README.md, especially D-pad navigation, playback, audio focus, background notification, picture-in-picture, sleep timer and real Cast handoff.
+
+Public-playlist QA adds an optional debug-only source picker for Russia, United States and Relax from iptv-org. It uses the normal import/preview/confirmation pipeline. Release sources define an empty sample catalogue. Six new UI scenarios exercise the real source importer with a synthetic M3U served by MockWebServer: no download before choosing, confirmation-only persistence, preview cancellation, download retry, TV navigation, Arabic labels and the hidden entry for an empty catalogue. Validation of this change is pending the GitHub Actions run; previous Android results above describe the preceding localization commit.
 
 Known scope limits:
 

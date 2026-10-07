@@ -166,4 +166,12 @@
         <item quantity="one">%1$d kategori</item>
         <item quantity="other">%1$d kategori</item>
     </plurals>
+    <string name="public_playlists_action">Herkese açık listeyi dene</string>
+    <string name="public_playlists_title">Herkese açık bir liste seç</string>
+    <string name="public_playlists_body">GitHub’daki iptv-org örnek listeleri. İndirmek ve kanallarını önizlemek için bir liste seç.</string>
+    <string name="public_playlists_notice">Topluluk listeleri zamanla değişir. Bazı kanallar kullanılamayabilir veya bölgende kısıtlanmış olabilir.</string>
+    <string name="public_playlist_russia">Rusya</string>
+    <string name="public_playlist_usa">ABD</string>
+    <string name="public_playlist_relax">Rahatlama</string>
+    <string name="public_playlist_name">iptv-org · %1$s</string>
 </resources>

@@ -170,4 +170,12 @@
         <item quantity="many">%1$d категорий</item>
         <item quantity="other">%1$d категорий</item>
     </plurals>
+    <string name="public_playlists_action">Попробовать публичный плейлист</string>
+    <string name="public_playlists_title">Выберите публичный плейлист</string>
+    <string name="public_playlists_body">Примеры плейлистов из iptv-org на GitHub. Выберите список, чтобы загрузить его и посмотреть состав каналов.</string>
+    <string name="public_playlists_notice">Публичные плейлисты меняются. Некоторые каналы могут быть недоступны или ограничены в вашем регионе.</string>
+    <string name="public_playlist_russia">Россия</string>
+    <string name="public_playlist_usa">США</string>
+    <string name="public_playlist_relax">Релакс</string>
+    <string name="public_playlist_name">iptv-org · %1$s</string>
 </resources>

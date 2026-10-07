@@ -49,7 +49,7 @@ private val sourceOptions=listOf(
     SourceOption("media",R.string.local_media,R.string.source_media_help,Icons.Rounded.FolderOpen)
 )
 
-@Composable fun AddSourceDialog(model: LibraryViewModel,onClose: ()->Unit) {
+@Composable fun AddSourceDialog(model: LibraryViewModel,publicSamples: List<PublicPlaylistSample> = PublicPlaylistCatalog.entries,onClose: ()->Unit) {
     val state by model.state.collectAsStateWithLifecycle()
     val context=LocalContext.current
     val focus=LocalFocusManager.current
@@ -57,6 +57,7 @@ private val sourceOptions=listOf(
     val tv=isTelevision()
     var type by rememberSaveable { mutableStateOf("url") }
     var details by rememberSaveable { mutableStateOf(false) }
+    var selectingPublic by rememberSaveable { mutableStateOf(false) }
     var name by rememberSaveable { mutableStateOf("") }
     // Provider addresses and credentials never enter the saved-instance-state bundle.
     var url by remember { mutableStateOf("") }
@@ -68,12 +69,14 @@ private val sourceOptions=listOf(
     val preview=state.sourcePreview
     val step=if(preview!=null) 3 else if(details) 2 else 1
     val choiceFocus=remember { FocusRequester() }
+    val publicFocus=remember { FocusRequester() }
     val confirmFocus=remember { FocusRequester() }
     fun close() { if(!state.sourceSaving) { model.discardSource();onClose() } }
     fun back() {
         if(state.sourceSaving) return
         if(preview!=null) model.discardSource()
         else if(details) { model.discardSource();details=false }
+        else if(selectingPublic) { model.discardSource();selectingPublic=false }
         else close()
     }
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -96,7 +99,7 @@ private val sourceOptions=listOf(
             Surface(modifier=if(wide) Modifier.widthIn(max=780.dp).fillMaxWidth(.85f).fillMaxHeight(.92f) else Modifier.fillMaxSize(),shape=RoundedCornerShape(if(wide) 28.dp else 0.dp),color=Canvas) {
                 Column(Modifier.fillMaxSize().padding(if(tv) 28.dp else 20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                        IconButton(onClick={back()},enabled=!state.sourceSaving,modifier=Modifier.focusRing()) { Icon(if(step==1) Icons.Rounded.Close else Icons.AutoMirrored.Rounded.ArrowBack,stringResource(if(step==1) R.string.close else R.string.back)) }
+                        IconButton(onClick={back()},enabled=!state.sourceSaving,modifier=Modifier.focusRing()) { Icon(if(step==1 && !selectingPublic) Icons.Rounded.Close else Icons.AutoMirrored.Rounded.ArrowBack,stringResource(if(step==1 && !selectingPublic) R.string.close else R.string.back)) }
                         Column(Modifier.weight(1f).padding(start=8.dp)) {
                             Text(stringResource(R.string.add_source),style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
                             Text(stringResource(R.string.step_of,step,3),style=MaterialTheme.typography.labelMedium,color=Mint)
@@ -105,11 +108,27 @@ private val sourceOptions=listOf(
                     if(state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                         when {
-                            preview!=null->SourcePreviewContent(preview)
-                            details->SourceDetails(type,name,{name=it},url,{url=it},user,{user=it},password,{password=it},epg,{epg=it},showPassword,{showPassword=!showPassword},state.busy)
+                            preview!=null->{
+                                if(selectingPublic) PublicPlaylistNotice()
+                                SourcePreviewContent(preview)
+                            }
+                            details->{
+                                if(selectingPublic) PublicPlaylistNotice()
+                                SourceDetails(type,name,{name=it},url,{url=it},user,{user=it},password,{password=it},epg,{epg=it},showPassword,{showPassword=!showPassword},state.busy)
+                            }
+                            selectingPublic && publicSamples.isNotEmpty()->PublicPlaylistPicker(publicSamples,publicFocus) { sample,sampleName ->
+                                if(!state.busy) {
+                                    model.discardSource()
+                                    type="url";name=sampleName;url=sample.url;user="";password="";epg="";details=true
+                                    model.prepareSource(SourceRequest(sampleName,"url",sample.url))
+                                }
+                            }
                             else->{
                                 Text(stringResource(R.string.source_choose_title),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
                                 Text(stringResource(R.string.source_guide),color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                if(publicSamples.isNotEmpty()) OutlinedButton(enabled=!state.busy,onClick={model.discardSource();selectingPublic=true},modifier=Modifier.fillMaxWidth().heightIn(min=56.dp).focusRing()) {
+                                    Icon(Icons.Rounded.Public,null,tint=Mint);Spacer(Modifier.width(10.dp));Text(stringResource(R.string.public_playlists_action))
+                                }
                                 sourceOptions.forEachIndexed { index,option ->
                                     Card(onClick={type=option.id;details=true;model.discardSource()},modifier=Modifier.fillMaxWidth().then(if(index==0) Modifier.initialFocus(choiceFocus,tv,step) else Modifier).focusRing(),shape=RoundedCornerShape(18.dp),colors=CardDefaults.cardColors(containerColor=Panel)) {
                                         Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically) {

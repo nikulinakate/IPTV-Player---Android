@@ -168,4 +168,12 @@
         <item quantity="many">%1$d categorías</item>
         <item quantity="other">%1$d categorías</item>
     </plurals>
+    <string name="public_playlists_action">Probar una lista pública</string>
+    <string name="public_playlists_title">Elige una lista pública</string>
+    <string name="public_playlists_body">Listas de ejemplo de iptv-org en GitHub. Elige una para descargarla y ver sus canales.</string>
+    <string name="public_playlists_notice">Las listas de la comunidad cambian. Algunos canales pueden no estar disponibles o estar restringidos en tu región.</string>
+    <string name="public_playlist_russia">Rusia</string>
+    <string name="public_playlist_usa">Estados Unidos</string>
+    <string name="public_playlist_relax">Relajación</string>
+    <string name="public_playlist_name">iptv-org · %1$s</string>
 </resources>

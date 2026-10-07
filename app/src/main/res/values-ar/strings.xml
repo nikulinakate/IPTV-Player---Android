@@ -174,4 +174,12 @@
         <item quantity="many">%1$d فئة</item>
         <item quantity="other">%1$d فئة</item>
     </plurals>
+    <string name="public_playlists_action">تجربة قائمة عامة</string>
+    <string name="public_playlists_title">اختر قائمة عامة</string>
+    <string name="public_playlists_body">قوائم تجريبية من iptv-org على GitHub. اختر قائمة لتنزيلها ومعاينة قنواتها.</string>
+    <string name="public_playlists_notice">تتغير قوائم المجتمع بمرور الوقت. قد تكون بعض القنوات غير متاحة أو مقيدة في منطقتك.</string>
+    <string name="public_playlist_russia">روسيا</string>
+    <string name="public_playlist_usa">الولايات المتحدة</string>
+    <string name="public_playlist_relax">استرخاء</string>
+    <string name="public_playlist_name">iptv-org · %1$s</string>
 </resources>

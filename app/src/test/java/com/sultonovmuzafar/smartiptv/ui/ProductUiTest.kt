@@ -16,6 +16,9 @@ import androidx.lifecycle.ViewModelStore
 import com.sultonovmuzafar.smartiptv.IPTVApplication
 import com.sultonovmuzafar.smartiptv.data.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.MockResponse
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -43,10 +46,10 @@ class ProductUiTest {
             file.outputStream().use { assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,it)) }
         }
     }
-    private inline fun withModel(block: (LibraryViewModel,LibraryDatabase)->Unit) {
+    private inline fun withModel(io: CoroutineDispatcher=Dispatchers.Main.immediate,block: (LibraryViewModel,LibraryDatabase)->Unit) {
         val app=(RuntimeEnvironment.getApplication() as IPTVApplication)
         val db=LibraryDatabase(app,object : TextVault { override fun seal(value: String)=value;override fun open(value: String)=value },"ui-${System.nanoTime()}.db")
-        val model=LibraryViewModel(app,db,SourceImporter(SourceClient()) { throw ImportFailure(ImportFailure.Reason.FILE) },Dispatchers.Main.immediate)
+        val model=LibraryViewModel(app,db,SourceImporter(SourceClient()) { throw ImportFailure(ImportFailure.Reason.FILE) },io)
         val store=ViewModelStore().apply { put("model",model) }
         try { block(model,db) } finally { store.clear();db.close() }
     }
@@ -71,7 +74,7 @@ class ProductUiTest {
     }
     @Test fun sourcePreviewRequiresConfirmationBeforeSaving() = withModel { model,db ->
         compose.setContent { IPTVTheme { AddSourceDialog(model) {} } }
-        compose.onNodeWithText("Open a single stream").performClick()
+        compose.onNodeWithText("Open a single stream").performScrollTo().performClick()
         compose.onNodeWithText("URL").performTextInput("https://example.test/live.m3u8")
         compose.onNodeWithText("Preview source").performClick()
         compose.onNodeWithText("Ready to add").assertIsDisplayed();assertTrue(db.sources().isEmpty())
@@ -145,7 +148,7 @@ class ProductUiTest {
     @Test @Config(qualifiers="ar-ldrtl-w411dp-h891dp-mdpi")
     fun arabicSourceEntryKeepsUrlLeftToRightAndCanPreview() = withModel { model,db ->
         compose.setContent { IPTVTheme { AddSourceDialog(model) {} } }
-        compose.onNodeWithText("فتح بث واحد").performClick()
+        compose.onNodeWithText("فتح بث واحد").performScrollTo().performClick()
         val url="https://example.test/live.m3u8?user=demo&token=abc"
         compose.onNodeWithText("الرابط").performTextInput(url)
         val results=mutableListOf<TextLayoutResult>()
@@ -165,5 +168,82 @@ class ProductUiTest {
         compose.onNodeWithText("شاهد").performKeyInput { pressKey(Key.DirectionDown) }
         compose.onNodeWithText("المفضلة").assertIsFocused().performKeyInput { pressKey(Key.DirectionCenter) }
         compose.onNodeWithText("قنواتك وعناوينك المحفوظة").assertIsDisplayed()
+    }
+    private fun publicSamples(server: MockWebServer)=PublicPlaylistCatalog.entries.map { it.copy(url=server.url("/${it.id}.m3u").toString()) }
+    private fun playlistResponse()=MockResponse().setHeader("Content-Type","application/x-mpegURL").setBody(
+        javaClass.getResourceAsStream("/public-playlist.m3u")!!.bufferedReader().use { it.readText() })
+    private fun waitForPreview(model: LibraryViewModel) {
+        compose.waitUntil(10_000) { model.state.value.sourcePreview!=null };compose.waitForIdle()
+    }
+    @Test fun publicPlaylistImportsThroughPreviewAndSavesOnlyAfterConfirmation() {
+        MockWebServer().use { server ->
+            server.enqueue(playlistResponse());server.start()
+            withModel(Dispatchers.IO) { model,db ->
+                compose.setContent { IPTVTheme { AddSourceDialog(model,publicSamples(server)) {} } }
+                compose.onNodeWithText("Try a public playlist").performClick()
+                compose.onNodeWithText("Russia").assertIsDisplayed();assertEquals(0,server.requestCount);assertTrue(db.sources().isEmpty())
+                compose.onNodeWithText("Russia").performClick();waitForPreview(model)
+                assertEquals(2,model.state.value.sourcePreview!!.total);assertEquals(2,model.state.value.sourcePreview!!.groupCount)
+                compose.onNodeWithText("QA News").assertIsDisplayed();assertTrue(db.sources().isEmpty())
+                screenshot("phone-public-playlist-preview")
+                compose.onNodeWithText("Add to my library").performClick()
+                compose.waitUntil(10_000) { model.state.value.message=="added" };compose.waitForIdle()
+                val source=db.sources().single()
+                assertEquals("iptv-org · Russia",source.name);assertEquals(server.url("/russia.m3u").toString(),source.url)
+                assertEquals(2,source.count);assertEquals("LIVE",model.state.value.addedKind)
+                assertEquals(1,server.requestCount);assertEquals("/russia.m3u",server.takeRequest().path)
+            }
+        }
+    }
+    @Test fun backingOutOfPublicPreviewReturnsToPickerWithoutSaving() {
+        MockWebServer().use { server ->
+            server.enqueue(playlistResponse());server.start()
+            withModel(Dispatchers.IO) { model,db ->
+                var closed=0
+                compose.setContent { IPTVTheme { AddSourceDialog(model,publicSamples(server)) { closed++ } } }
+                compose.onNodeWithText("Try a public playlist").performClick();compose.onNodeWithText("Relax").performClick();waitForPreview(model)
+                compose.onNodeWithContentDescription("Back").performClick()
+                compose.onNodeWithContentDescription("Back").performClick()
+                compose.onNodeWithText("Choose a public playlist").assertIsDisplayed();assertNull(model.state.value.sourcePreview);assertTrue(db.sources().isEmpty())
+                compose.onNodeWithContentDescription("Back").performClick()
+                compose.onNodeWithText("How will you connect?").assertIsDisplayed()
+                compose.onNodeWithContentDescription("Close").performClick();assertEquals(1,closed);assertTrue(db.sources().isEmpty())
+            }
+        }
+    }
+    @Test fun failedPublicDownloadCanBeRetriedWithoutSavingTheFailure() {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setResponseCode(503));server.enqueue(playlistResponse());server.start()
+            withModel(Dispatchers.IO) { model,db ->
+                compose.setContent { IPTVTheme { AddSourceDialog(model,publicSamples(server)) {} } }
+                compose.onNodeWithText("Try a public playlist").performClick();compose.onNodeWithText("United States").performClick()
+                compose.waitUntil(10_000) { model.state.value.error==ImportFailure.Reason.SERVER };compose.waitForIdle()
+                assertTrue(db.sources().isEmpty());assertNull(model.state.value.sourcePreview)
+                compose.onNodeWithText("Check source").performClick();waitForPreview(model)
+                assertEquals("iptv-org · United States",model.state.value.sourcePreview!!.name)
+                assertTrue(db.sources().isEmpty());assertEquals(2,server.requestCount)
+                model.discardSource()
+            }
+        }
+    }
+    @Test fun emptyReleaseCatalogueHidesPublicPlaylistEntry() = withModel { model,db ->
+        compose.setContent { IPTVTheme { AddSourceDialog(model,publicSamples=emptyList()) {} } }
+        compose.onNodeWithText("Try a public playlist").assertDoesNotExist()
+        compose.onNodeWithText("Playlist URL · M3U / M3U8").assertIsDisplayed();assertTrue(db.sources().isEmpty())
+    }
+    @Test @Config(qualifiers="w1280dp-h720dp-land-television-mdpi")
+    fun publicPlaylistPickerSupportsTheTvRemote() = withModel { model,db ->
+        compose.setContent { IPTVTheme { AddSourceDialog(model) {} } }
+        compose.onNodeWithText("Playlist URL · M3U / M3U8").assertIsFocused().performKeyInput { pressKey(Key.DirectionUp) }
+        compose.onNodeWithText("Try a public playlist").assertIsFocused().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.onNodeWithText("Russia").assertIsFocused().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNodeWithText("United States").assertIsFocused();assertTrue(db.sources().isEmpty());screenshot("tv-public-playlist-picker")
+    }
+    @Test @Config(qualifiers="ar-ldrtl-w411dp-h891dp-mdpi")
+    fun arabicPublicPlaylistPickerUsesLocalizedCountries() = withModel { model,db ->
+        compose.setContent { IPTVTheme { AddSourceDialog(model) {} } }
+        compose.onNodeWithText("تجربة قائمة عامة").performClick()
+        compose.onNodeWithText("روسيا").assertIsDisplayed();compose.onNodeWithText("الولايات المتحدة").assertIsDisplayed()
+        compose.onNodeWithText("استرخاء").assertIsDisplayed();assertTrue(db.sources().isEmpty());screenshot("phone-public-playlist-picker-ar")
     }
 }

@@ -166,4 +166,12 @@
         <item quantity="one">%1$d category</item>
         <item quantity="other">%1$d categories</item>
     </plurals>
+    <string name="public_playlists_action">Try a public playlist</string>
+    <string name="public_playlists_title">Choose a public playlist</string>
+    <string name="public_playlists_body">Sample playlists from iptv-org on GitHub. Choose one to download and preview its channels.</string>
+    <string name="public_playlists_notice">Community playlists change over time. Some channels may be unavailable or restricted in your region.</string>
+    <string name="public_playlist_russia">Russia</string>
+    <string name="public_playlist_usa">United States</string>
+    <string name="public_playlist_relax">Relax</string>
+    <string name="public_playlist_name">iptv-org · %1$s</string>
 </resources>

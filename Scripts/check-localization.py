@@ -60,7 +60,7 @@ def main():
     languages = [node.attrib["{http://schemas.android.com/apk/res/android}name"] for node in config]
     assert len(languages) == len(set(languages)) and set(languages) == set(LOCALES), "Language settings do not match translations"
     referenced = set()
-    for path in (ROOT / "app/src/main/java").rglob("*.kt"):
+    for path in (ROOT / "app/src").rglob("*.kt"):
         referenced.update(re.findall(r"R\.(string|plurals)\.(\w+)", path.read_text()))
     assert referenced <= base.keys(), f"Unknown resources referenced: {referenced - base.keys()}"
     print(f"PASS: {len(LOCALES)} locales, {sum(k[0] == 'string' for k in base)} strings and {sum(k[0] == 'plurals' for k in base)} plurals each; placeholders and language settings match")
