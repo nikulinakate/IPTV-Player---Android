@@ -65,6 +65,7 @@ class LibraryDatabase(context: Context,private val vault: TextVault = SecretVaul
         } finally { db.endTransaction() }
     }
     fun episodes(parentId: String): List<Channel> = readableDatabase.rawQuery("$resolvedSelect WHERE c.parent=? ORDER BY CAST(c.group_name AS INTEGER),c.name COLLATE NOCASE,c.id",arrayOf(parentId)).use { c -> buildList { while(c.moveToNext()) add(channel(c)) } }
+    fun continueWatching(): List<Channel> = readableDatabase.rawQuery("$metadataSelect WHERE h.position>0 AND h.last_played>0 AND c.kind IN ('MOVIE','VIDEO','EPISODE') ORDER BY h.last_played DESC,c.id LIMIT 8",null).use { c -> buildList { while(c.moveToNext()) add(metadata(c)) } }
     fun catalog(filter: CatalogFilter,offset: Int=0,limit: Int=PAGE_SIZE): CatalogPage {
         val sql=CatalogSql.forFilter(filter)
         val db=readableDatabase

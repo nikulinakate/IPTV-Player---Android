@@ -30,6 +30,8 @@ class PlayerActivity : FragmentActivity() {
     private var controller: MediaController?=null
     private var channel: Channel?=null
     private var inPip by mutableStateOf(false)
+    private var controlsLocked=false
+    fun lockControls(locked: Boolean) { controlsLocked=locked }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState); enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -90,6 +92,7 @@ class PlayerActivity : FragmentActivity() {
         PlaybackService.instance?.savePosition()
     }
     override fun onKeyDown(keyCode: Int,event: android.view.KeyEvent): Boolean {
+        if(controlsLocked && (keyCode==android.view.KeyEvent.KEYCODE_CHANNEL_UP || keyCode==android.view.KeyEvent.KEYCODE_CHANNEL_DOWN)) return true
         if(PlaybackService.instance?.channel?.kind=="LIVE") {
             if(keyCode==android.view.KeyEvent.KEYCODE_CHANNEL_UP) { PlaybackService.instance?.step(true);return true }
             if(keyCode==android.view.KeyEvent.KEYCODE_CHANNEL_DOWN) { PlaybackService.instance?.step(false);return true }

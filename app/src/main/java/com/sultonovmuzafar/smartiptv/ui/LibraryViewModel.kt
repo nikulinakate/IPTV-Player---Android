@@ -5,29 +5,39 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartiptv.core.UrlTools
+import android.content.Intent
 import com.sultonovmuzafar.smartiptv.IPTVApplication
 import com.sultonovmuzafar.smartiptv.data.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.UUID
 
 data class LibraryState(
     val sources: List<Source> = emptyList(), val channels: List<Channel> = emptyList(),
     val busy: Boolean = false, val ready: Boolean = false, val error: ImportFailure.Reason? = null,
     val message: String? = null, val episodes: List<Channel>? = null,
     val schedule: List<Programme>? = null, val guideChannel: Channel? = null,
-    val total: Int=0,val groups: List<String> = emptyList(),val catalogLoading: Boolean=false
+    val total: Int=0,val groups: List<String> = emptyList(),val catalogLoading: Boolean=false,
+    val continueWatching: List<Channel> = emptyList(),val sourcePreview: SourcePreview?=null,
+    val sourcePreparing: Boolean=false,val sourceSaving: Boolean=false,
+    val addedSourceId: String="",val addedKind: String="LIVE"
 )
-class LibraryViewModel(application: Application) : AndroidViewModel(application) {
+class LibraryViewModel internal constructor(application: Application,private val db: LibraryDatabase,private val importer: SourceImporter,private val io: CoroutineDispatcher) : AndroidViewModel(application) {
+    constructor(application: Application): this(application,(application as IPTVApplication).database,
+        SourceImporter(application.sources) { uri ->
+            application.contentResolver.openInputStream(Uri.parse(uri))?.use { SourceClient.readLimited(it,50*1024*1024) }
+                ?: throw ImportFailure(ImportFailure.Reason.FILE)
+        },Dispatchers.IO)
     private val app = application as IPTVApplication
-    private val db = app.database
     private val client = app.sources
     private val mutable = MutableStateFlow(LibraryState())
     val state = mutable.asStateFlow()
     private var catalogFilter=CatalogFilter()
     private var catalogJob: Job?=null
     private var catalogGeneration=0L
+    private var sourceGeneration=0L
+    private var prepareJob: Job?=null
+    private var pendingSource: PreparedSource?=null
     init { reload() }
     fun reload() = viewModelScope.launch {
         try { load() }
@@ -35,8 +45,8 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         catch (_: Exception) { mutable.value=mutable.value.copy(ready=true,error=ImportFailure.Reason.FILE) }
     }
     private suspend fun load() {
-        val sources = withContext(Dispatchers.IO) { db.sources() }
-        mutable.value = mutable.value.copy(sources=sources,ready=true)
+        val (sources,resume) = withContext(io) { db.sources() to db.continueWatching() }
+        mutable.value = mutable.value.copy(sources=sources,continueWatching=resume,ready=true)
         queryCatalog()
     }
     fun setFilter(filter: CatalogFilter) {
@@ -58,7 +68,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         catalogJob=viewModelScope.launch {
             try {
                 if(debounce) delay(180)
-                val page=withContext(Dispatchers.IO) { db.catalog(filter,offset) }
+                val page=withContext(io) { db.catalog(filter,offset) }
                 if(generation==catalogGeneration) mutable.value=mutable.value.copy(
                     channels=if(append) (mutable.value.channels+page.channels).distinctBy { it.id } else page.channels,
                     total=page.total,groups=page.groups,catalogLoading=false)
@@ -70,7 +80,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         if(mutable.value.busy) return
         mutable.value=mutable.value.copy(busy=true,error=null,message=null)
         viewModelScope.launch {
-            try { withContext(Dispatchers.IO) { block() }; load() }
+            try { withContext(io) { block() }; load() }
             catch(e: CancellationException) { throw e }
             catch(e: ImportFailure) { mutable.value=mutable.value.copy(error=e.reason) }
             catch (_: Exception) { mutable.value=mutable.value.copy(error=ImportFailure.Reason.FILE) }
@@ -78,35 +88,52 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
     fun clearFeedback() { mutable.value=mutable.value.copy(error=null,message=null) }
-    fun add(name: String,type: String,url: String,user: String="",password: String="",epg: String="",uri: Uri?=null) = operation {
-        val validated = try {
-            if(type=="xtream") UrlTools.server(url) else if(type=="file" || type=="media") requireNotNull(uri).toString() else UrlTools.requireHttp(url)
-        } catch (_: Exception) { throw ImportFailure(ImportFailure.Reason.INVALID_URL) }
-        val source = Source(UUID.randomUUID().toString(),name.trim().ifEmpty { "Playlist" },type,validated,user.trim(),password,
-            if(epg.isBlank()) "" else try { UrlTools.requireHttp(epg) } catch (_: Exception) { throw ImportFailure(ImportFailure.Reason.INVALID_URL) })
-        when(type) {
-            "xtream" -> {
-                if(user.isBlank() || password.isBlank()) throw ImportFailure(ImportFailure.Reason.AUTH)
-                db.save(source,client.xtream(source))
-            }
-            "stream","media" -> {
-                val mime = uri?.let { app.contentResolver.getType(it) }.orEmpty()
-                if(type=="media" && !mime.startsWith("video/") && !mime.startsWith("audio/") && !mime.startsWith("image/")) throw ImportFailure(ImportFailure.Reason.UNSUPPORTED)
-                val kind=when {
-                    mime.startsWith("image/")->"IMAGE"
-                    type=="stream" && Uri.parse(validated).path.orEmpty().endsWith(".m3u8",true)->"LIVE"
-                    else->"VIDEO"
+    fun prepareSource(request: SourceRequest) {
+        if(mutable.value.busy) return
+        val generation=++sourceGeneration
+        pendingSource=null
+        mutable.value=mutable.value.copy(busy=true,sourcePreparing=true,sourcePreview=null,error=null,message=null)
+        prepareJob=viewModelScope.launch {
+            try {
+                val (prepared,preview)=withContext(io) { importer.prepare(request).let { it to it.preview } }
+                if(generation==sourceGeneration) {
+                    pendingSource=prepared
+                    mutable.value=mutable.value.copy(sourcePreview=preview)
                 }
-                db.save(source,listOf(Channel(SourceClient.id(source.id,validated),source.id,source.name,validated,kind=kind)))
-            }
-            else -> {
-                val downloaded = if(type=="file") null else client.download(validated)
-                val bytes = downloaded?.bytes ?: app.contentResolver.openInputStream(requireNotNull(uri))?.use { SourceClient.readLimited(it,50*1024*1024) } ?: throw ImportFailure(ImportFailure.Reason.FILE)
-                val (resolved,channels) = client.playlist(source,bytes,downloaded?.finalUrl)
-                db.save(resolved,channels)
-            }
+            } catch(e: CancellationException) { throw e }
+            catch(e: ImportFailure) { if(generation==sourceGeneration) mutable.value=mutable.value.copy(error=e.reason) }
+            catch (_: Exception) { if(generation==sourceGeneration) mutable.value=mutable.value.copy(error=ImportFailure.Reason.FILE) }
+            finally { if(generation==sourceGeneration) mutable.value=mutable.value.copy(busy=false,sourcePreparing=false) }
         }
-        mutable.value=mutable.value.copy(message="added")
+    }
+    fun discardSource() {
+        if(mutable.value.sourceSaving) return
+        sourceGeneration++
+        prepareJob?.cancel();prepareJob=null;pendingSource=null
+        mutable.value=mutable.value.copy(busy=if(mutable.value.sourcePreparing) false else mutable.value.busy,
+            sourcePreparing=false,sourcePreview=null,error=null)
+    }
+    fun confirmSource() {
+        if(mutable.value.busy) return
+        val prepared=pendingSource ?: return
+        mutable.value=mutable.value.copy(busy=true,sourceSaving=true,error=null)
+        viewModelScope.launch {
+            try {
+                withContext(io) {
+                    if(prepared.source.type=="file" || prepared.source.type=="media") {
+                        try { app.contentResolver.takePersistableUriPermission(Uri.parse(prepared.source.url),Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+                        catch (_: SecurityException) { throw ImportFailure(ImportFailure.Reason.FILE) }
+                    }
+                    db.save(prepared.source,prepared.channels)
+                }
+                load()
+                pendingSource=null
+                mutable.value=mutable.value.copy(sourcePreview=null,message="added",addedSourceId=prepared.source.id,addedKind=prepared.preview.preferredKind)
+            } catch(e: CancellationException) { throw e }
+            catch(e: ImportFailure) { mutable.value=mutable.value.copy(error=e.reason) }
+            catch (_: Exception) { mutable.value=mutable.value.copy(error=ImportFailure.Reason.FILE) }
+            finally { mutable.value=mutable.value.copy(busy=false,sourceSaving=false) }
+        }
     }
     fun refresh(source: Source) = operation {
         when(source.type) {
@@ -123,7 +150,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     }
     fun remove(source: Source) = operation { db.remove(source.id) }
     fun favorite(channel: Channel) = viewModelScope.launch {
-        withContext(Dispatchers.IO) { db.favorite(channel.id,!channel.favorite) }
+        withContext(io) { db.favorite(channel.id,!channel.favorite) }
         if(catalogFilter.tab==1 && channel.favorite) {
             mutable.value=mutable.value.copy(channels=mutable.value.channels.filterNot { it.id==channel.id },total=(mutable.value.total-1).coerceAtLeast(0))
         } else mutable.value=mutable.value.copy(channels=mutable.value.channels.map { if(it.id==channel.id) it.copy(favorite=!channel.favorite) else it })

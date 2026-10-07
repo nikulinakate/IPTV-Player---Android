@@ -5,10 +5,10 @@ Validated with JDK 17, Android SDK 36, Build Tools 35.0.0, Gradle 8.13 / AGP 8.1
 | Check | Result |
 | --- | --- |
 | `:core:selfTest` | PASS: 42 assertions, including 20,000-channel import, stable IDs and bounded retry policy |
-| `:app:testDebugUnitTest` | PASS: 17 tests, 0 failures, 0 errors |
+| `:app:testDebugUnitTest` | PASS: 34 tests, 0 failures, 0 errors |
 | `:app:assembleDebug` | PASS: debug APK generated |
 | `:app:lintDebug` | PASS: 0 errors; non-blocking style, dependency-version and resource warnings remain |
-| EN / RU localization | 118 strings in each locale; no missing referenced keys |
+| EN / RU localization | 158 strings and 2 plural resources in each locale; no missing referenced keys |
 | Gradle distribution | Official SHA-256 verified and pinned in wrapper |
 
 The source-client tests use MockWebServer and verify authenticated Xtream Live / VOD / Series import, expired-account rejection, encoded credentials, provider-specific live output formats, episode ordering and extensions, playlist redirects, redacted access errors and payload limits.
@@ -16,6 +16,10 @@ The source-client tests use MockWebServer and verify authenticated Xtream Live /
 Core tests verify quoted M3U Plus metadata, relative URLs, logos and EPG, duplicate and unsafe URL filtering, VLC headers, HLS manifests, Xtream URL construction, XMLTV timezone conversion and protection against external XML entity access.
 
 Robolectric tests exercise SQLite paging with no secret reads, single-channel resolution, favorites and resume across refresh, transactional rollback, v1-to-v2 migration, Unicode/literal-wildcard search, group-scoped channel navigation and delayed checkpoints after source deletion. Playback tests distinguish network failures from permanent HTTP/format/DRM failures and verify retry limits and redacted UI state. The main activity launches under a simulated Android 8 framework; this does not test device rendering, codecs or Cast.
+
+Product-flow tests verify that draft preparation/cancellation does not write a source, late cancelled results do not replace a newer draft, repeated confirmation does not duplicate a source, validation errors can be corrected and local/video imports select the correct destination. Resume queries return at most eight metadata-only unfinished videos/movies/episodes and exclude Live TV, images and completed titles.
+
+Compose tests exercise onboarding forward/back/final confirmation, source-preview confirmation and D-pad activation of onboarding actions and the TV side menu. Phone library/resume placement and Russian final onboarding CTA visibility are also checked. Preview images are rendered with Robolectric native graphics via the Compose host view at 411×891 phone and 1280×720 TV configurations. These are framework renders for layout inspection, not emulator/device captures. CI uploads them as `smart-iptv-ui-preview`.
 
 Catalogue measurements from one successful local test run:
 

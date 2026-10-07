@@ -90,6 +90,18 @@ class LibraryDatabaseTest {
             assertEquals(b.id,db.neighbor(a,false)!!.id)
         }
     }
+    @Test fun continueWatchingIsBoundedMetadataAndExcludesLiveImagesAndCompletedItems() {
+        val vault=CountingVault()
+        database(vault).withDatabase { db ->
+            val movies=(0 until 12).map { channel("movie-$it").copy(kind="MOVIE") }
+            db.save(source,movies+listOf(channel("live"),channel("photo").copy(kind="IMAGE"),channel("ended").copy(kind="VIDEO")))
+            movies.forEachIndexed { index,c -> db.played(c.id,1000,index.toLong()+1) }
+            db.played("live",10_000,100);db.played("photo",10_000,101);db.played("ended",0,102)
+            val resume=db.continueWatching()
+            assertEquals(8,resume.size);assertEquals("movie-11",resume.first().id)
+            assertTrue(resume.all { it.kind=="MOVIE" && it.url.isEmpty() });assertEquals(0,vault.reads)
+        }
+    }
     @Test fun versionOneMigrationKeepsChannelsHistoryAndUnicodeSearch() {
         val context=RuntimeEnvironment.getApplication()
         val name="migration-${System.nanoTime()}.db"
