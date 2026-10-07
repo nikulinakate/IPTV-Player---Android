@@ -3,6 +3,7 @@ package com.sultonovmuzafar.smartiptv.ui
 import android.graphics.Bitmap
 import androidx.compose.ui.platform.ViewRootForTest
 import android.graphics.Canvas
+import android.os.Looper
 import androidx.compose.ui.input.key.Key
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -25,6 +26,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.annotation.LooperMode
@@ -173,7 +175,18 @@ class ProductUiTest {
     private fun playlistResponse()=MockResponse().setHeader("Content-Type","application/x-mpegURL").setBody(
         javaClass.getResourceAsStream("/public-playlist.m3u")!!.bufferedReader().use { it.readText() })
     private fun waitForPreview(model: LibraryViewModel) {
-        compose.waitUntil(10_000) { model.state.value.sourcePreview!=null };compose.waitForIdle()
+        waitForModel { model.state.value.sourcePreview!=null || model.state.value.error!=null }
+        assertNull("Source preparation failed",model.state.value.error)
+        assertNotNull(model.state.value.sourcePreview)
+    }
+    private fun waitForModel(condition: ()->Boolean) {
+        compose.waitUntil(10_000) {
+            // IO completion resumes viewModelScope on Android's paused main looper.
+            // Compose's frame clock alone does not drain those Handler continuations.
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            condition()
+        }
+        compose.waitForIdle()
     }
     @Test fun publicPlaylistImportsThroughPreviewAndSavesOnlyAfterConfirmation() {
         MockWebServer().use { server ->
@@ -187,7 +200,7 @@ class ProductUiTest {
                 compose.onNodeWithText("QA News").assertIsDisplayed();assertTrue(db.sources().isEmpty())
                 screenshot("phone-public-playlist-preview")
                 compose.onNodeWithText("Add to my library").performClick()
-                compose.waitUntil(10_000) { model.state.value.message=="added" };compose.waitForIdle()
+                waitForModel { model.state.value.message=="added" }
                 val source=db.sources().single()
                 assertEquals("iptv-org · Russia",source.name);assertEquals(server.url("/russia.m3u").toString(),source.url)
                 assertEquals(2,source.count);assertEquals("LIVE",model.state.value.addedKind)
@@ -217,7 +230,7 @@ class ProductUiTest {
             withModel(Dispatchers.IO) { model,db ->
                 compose.setContent { IPTVTheme { AddSourceDialog(model,publicSamples(server)) {} } }
                 compose.onNodeWithText("Try a public playlist").performClick();compose.onNodeWithText("United States").performClick()
-                compose.waitUntil(10_000) { model.state.value.error==ImportFailure.Reason.SERVER };compose.waitForIdle()
+                waitForModel { model.state.value.error==ImportFailure.Reason.SERVER }
                 assertTrue(db.sources().isEmpty());assertNull(model.state.value.sourcePreview)
                 compose.onNodeWithText("Check source").performClick();waitForPreview(model)
                 assertEquals("iptv-org · United States",model.state.value.sourcePreview!!.name)
