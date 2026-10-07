@@ -4,16 +4,29 @@ Validated with JDK 17, Android SDK 36, Build Tools 35.0.0, Gradle 8.13 / AGP 8.1
 
 | Check | Result |
 | --- | --- |
-| `:core:selfTest` | PASS: 30 assertions, including 20,000-channel import |
-| `:app:testDebugUnitTest` | PASS: 5 tests, 0 failures, 0 errors |
+| `:core:selfTest` | PASS: 42 assertions, including 20,000-channel import, stable IDs and bounded retry policy |
+| `:app:testDebugUnitTest` | PASS: 17 tests, 0 failures, 0 errors |
 | `:app:assembleDebug` | PASS: debug APK generated |
 | `:app:lintDebug` | PASS: 0 errors; non-blocking style, dependency-version and resource warnings remain |
-| EN / RU localization | 108 strings in each locale; no missing referenced keys |
+| EN / RU localization | 118 strings in each locale; no missing referenced keys |
 | Gradle distribution | Official SHA-256 verified and pinned in wrapper |
 
 The source-client tests use MockWebServer and verify authenticated Xtream Live / VOD / Series import, expired-account rejection, encoded credentials, provider-specific live output formats, episode ordering and extensions, playlist redirects, redacted access errors and payload limits.
 
 Core tests verify quoted M3U Plus metadata, relative URLs, logos and EPG, duplicate and unsafe URL filtering, VLC headers, HLS manifests, Xtream URL construction, XMLTV timezone conversion and protection against external XML entity access.
+
+Robolectric tests exercise SQLite paging with no secret reads, single-channel resolution, favorites and resume across refresh, transactional rollback, v1-to-v2 migration, Unicode/literal-wildcard search, group-scoped channel navigation and delayed checkpoints after source deletion. Playback tests distinguish network failures from permanent HTTP/format/DRM failures and verify retry limits and redacted UI state. The main activity launches under a simulated Android 8 framework; this does not test device rendering, codecs or Cast.
+
+Catalogue measurements from one successful local test run:
+
+| Channels | Parse M3U | Import SQLite | First 200 items | Search | Catalogue secret reads |
+| --- | --- | --- | --- | --- | --- |
+| 20,000 | 463 ms | 2,940 ms | 71 ms | 33 ms | 0 |
+| 50,000 | 436 ms | 1,512 ms | 62 ms | 133 ms | 0 |
+
+These are desktop Robolectric SQLite measurements with an injected test vault. They exclude network download and real Android Keystore work, and are not phone performance guarantees. JVM/database warm-up affects the comparison. Tests assert catalogue correctness rather than fragile timing thresholds.
+
+A downloaded Google/Shaka HLS initialization fragment plus its first segment passed local `ffprobe` inspection as H.264, 192×144. This checks the sample container only; Android playback still needs a device. The GitHub SDK-install step was updated to use the runner's installed command-line tools instead of requesting the obsolete `tools` package.
 
 No Android emulator, physical phone, TV box, real provider account or Cast receiver was available for playback testing. Build/test success is not a claim that a provider's codecs, DRM, account limits or receiver network access work on every device. Before release, complete the device checklist in README.md, especially D-pad navigation, playback, audio focus, background notification, picture-in-picture, sleep timer and real Cast handoff.
 

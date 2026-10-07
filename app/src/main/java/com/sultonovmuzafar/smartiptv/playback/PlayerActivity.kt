@@ -22,6 +22,7 @@ import com.sultonovmuzafar.smartiptv.IPTVApplication
 import com.sultonovmuzafar.smartiptv.data.Channel
 import com.sultonovmuzafar.smartiptv.ui.IPTVTheme
 import kotlinx.coroutines.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlayerActivity : FragmentActivity() {
@@ -54,21 +55,30 @@ class PlayerActivity : FragmentActivity() {
         if(controller!=null && packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
             window.decorView.post { setPictureInPictureParams(pipParams()) }
         }
-        setContent { IPTVTheme { PlayerScreen(this,channel,controller,inPip) } }
+        setContent { IPTVTheme {
+            val service=PlaybackService.instance
+            if(service!=null && controller!=null) {
+                val status by service.status.collectAsStateWithLifecycle()
+                PlayerScreen(this,status.channel ?: channel,controller,inPip,status)
+            } else PlayerScreen(this,channel,controller,inPip)
+        } }
     }
     private fun pipParams(): PictureInPictureParams {
         val rect=android.graphics.Rect()
         window.decorView.getGlobalVisibleRect(rect)
         val builder=PictureInPictureParams.Builder().setAspectRatio(Rational(16,9)).setSourceRectHint(rect)
-        if(android.os.Build.VERSION.SDK_INT>=31) builder.setAutoEnterEnabled(getSharedPreferences("settings",MODE_PRIVATE).getBoolean("pip",false))
+        if(android.os.Build.VERSION.SDK_INT>=31) builder.setAutoEnterEnabled(controller?.isPlaying==true && getSharedPreferences("settings",MODE_PRIVATE).getBoolean("pip",false))
         return builder.build()
     }
     fun pip() {
         if(packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && controller!=null) enterPictureInPictureMode(pipParams())
     }
+    fun updatePip() {
+        if(controller!=null && packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) setPictureInPictureParams(pipParams())
+    }
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if(getSharedPreferences("settings",MODE_PRIVATE).getBoolean("pip",false) && controller?.isPlaying==true) pip()
+        if(android.os.Build.VERSION.SDK_INT<31 && getSharedPreferences("settings",MODE_PRIVATE).getBoolean("pip",false) && controller?.isPlaying==true) pip()
     }
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean,newConfig: android.content.res.Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode,newConfig)
@@ -78,6 +88,13 @@ class PlayerActivity : FragmentActivity() {
         super.onStop()
         if(!isInPictureInPictureMode && !getSharedPreferences("settings",MODE_PRIVATE).getBoolean("background",false)) controller?.pause()
         PlaybackService.instance?.savePosition()
+    }
+    override fun onKeyDown(keyCode: Int,event: android.view.KeyEvent): Boolean {
+        if(PlaybackService.instance?.channel?.kind=="LIVE") {
+            if(keyCode==android.view.KeyEvent.KEYCODE_CHANNEL_UP) { PlaybackService.instance?.step(true);return true }
+            if(keyCode==android.view.KeyEvent.KEYCODE_CHANNEL_DOWN) { PlaybackService.instance?.step(false);return true }
+        }
+        return super.onKeyDown(keyCode,event)
     }
     override fun onDestroy() {
         controllerFuture?.let { MediaController.releaseFuture(it) }; controller=null

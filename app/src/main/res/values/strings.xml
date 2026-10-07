@@ -108,4 +108,14 @@
     <string name="audio">Audio</string>
     <string name="subtitles">Subtitles</string>
     <string name="quality">Quality</string>
+    <string name="previous_channel">Previous channel in this group</string>
+    <string name="next_channel">Next channel in this group</string>
+    <string name="playback_access">Access denied. Check your provider account, subscription or connection limit.</string>
+    <string name="playback_not_found">This stream no longer exists. Refresh the playlist or contact your provider.</string>
+    <string name="playback_format">This device cannot play the stream format or codec. Try another quality or an external player.</string>
+    <string name="playback_drm">The stream requires a DRM license that this player cannot obtain.</string>
+    <string name="playback_file">The file is unavailable. Choose the file again and check access permission.</string>
+    <string name="waiting_for_network">Waiting for a network connection…</string>
+    <string name="reconnecting">Reconnecting… attempt %1$d of %2$d</string>
+    <string name="cancel_reconnect">Stop reconnecting</string>
 </resources>

@@ -22,8 +22,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sultonovmuzafar.smartiptv.R
 import com.sultonovmuzafar.smartiptv.data.*
 import com.sultonovmuzafar.smartiptv.playback.PlayerActivity
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 @Composable fun LibraryScreen(model: LibraryViewModel) {
     val state by model.state.collectAsStateWithLifecycle()
@@ -45,21 +45,21 @@ import kotlinx.coroutines.withContext
         if(message!=null) add=false
         (errorText ?: message)?.let { snackbar.showSnackbar(it); model.clearFeedback() }
     }
-    val groups=remember(state.channels,sourceFilter,kind) { state.channels.filter { it.parentId.isEmpty() && (sourceFilter.isEmpty() || it.sourceId==sourceFilter) && it.kind==kind }.map { it.group }.filter { it.isNotEmpty() }.distinct().sorted() }
+    val groups=state.groups
     LaunchedEffect(state.sources,groups) {
         if(sourceFilter.isNotEmpty() && state.sources.none { it.id==sourceFilter }) sourceFilter=""
-        if(group.isNotEmpty() && group !in groups) group=""
+        if(!state.catalogLoading && group.isNotEmpty() && group !in groups) group=""
     }
-    var visible by remember { mutableStateOf(emptyList<Channel>()) }
-    LaunchedEffect(state.channels,tab,query,sourceFilter,group,kind) {
-        visible=withContext(Dispatchers.Default) {
-            state.channels.filter {
-                (it.parentId.isEmpty() || tab==2) && (sourceFilter.isEmpty() || it.sourceId==sourceFilter) &&
-                    (group.isEmpty() || it.group==group) && (tab!=0 || it.kind==kind || (kind=="VIDEO" && it.kind=="IMAGE")) &&
-                    (tab!=1 || it.favorite) && (tab!=2 || it.lastPlayed>0) &&
-                    (query.isEmpty() || it.name.contains(query,true) || it.group.contains(query,true))
-            }.let { if(tab==2) it.sortedByDescending { c->c.lastPlayed } else it }
-        }
+    val visible=state.channels
+    val gridState=rememberLazyGridState()
+    LaunchedEffect(tab,query,sourceFilter,group,kind) {
+        if(tab!=3) model.setFilter(CatalogFilter(tab,sourceFilter,group,kind,query))
+        gridState.scrollToItem(0)
+    }
+    LaunchedEffect(gridState,state.channels.size,state.catalogLoading,state.total) {
+        snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }
+            .distinctUntilChanged().filter { it>=state.channels.size-12 && it>=0 }
+            .collect { model.loadMore() }
     }
     fun play(channel: Channel) { if(channel.kind=="SERIES") model.openSeries(channel) else PlayerActivity.launch(context,channel) }
     if(onboarding) {
@@ -83,7 +83,7 @@ import kotlinx.coroutines.withContext
                 CastButton()
                 IconButton(onClick={settings=true}) { Icon(Icons.Rounded.Settings,stringResource(R.string.settings)) }
             }
-            if(state.busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(bottom=12.dp))
+            if(state.busy || state.catalogLoading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(bottom=12.dp))
             if(!state.ready) Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { CircularProgressIndicator() }
             else if(tab==3) SourceScreen(state,model,onAdd={add=true})
             else if(state.sources.isEmpty()) {
@@ -104,11 +104,11 @@ import kotlinx.coroutines.withContext
                     items(groups) { name->FilterChip(selected=group==name,onClick={group=name},label={Text(name)}) }
                 }
                 Row(Modifier.fillMaxWidth().padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically) {
-                    Text(stringResource(R.string.items_count,visible.size),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.weight(1f))
+                    Text(stringResource(R.string.items_count,state.total),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.weight(1f))
                     TextButton(onClick={add=true}) { Icon(Icons.Rounded.Add,null,Modifier.size(18.dp)); Text(stringResource(R.string.add)) }
                 }
-                if(visible.isEmpty()) EmptyState(Icons.Rounded.SearchOff,stringResource(R.string.no_results),stringResource(if(tab==1) R.string.favorites_hint else if(tab==2) R.string.recent_hint else R.string.search_hint))
-                else LazyVerticalGrid(columns=GridCells.Adaptive(330.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=20.dp)) {
+                if(visible.isEmpty() && !state.catalogLoading) EmptyState(Icons.Rounded.SearchOff,stringResource(R.string.no_results),stringResource(if(tab==1) R.string.favorites_hint else if(tab==2) R.string.recent_hint else R.string.search_hint))
+                else LazyVerticalGrid(state=gridState,columns=GridCells.Adaptive(330.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=20.dp)) {
                     items(visible,key={it.id}) { channel -> ChannelCard(channel,{play(channel)},{model.favorite(channel)},{model.guide(channel)}) }
                 }
             }

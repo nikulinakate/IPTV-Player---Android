@@ -3,6 +3,7 @@ package com.sultonovmuzafar.smartiptv.data
 import com.smartiptv.core.PlaylistParser
 import com.smartiptv.core.UrlTools
 import com.smartiptv.core.XmlTvParser
+import com.smartiptv.core.ChannelIdentity
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
@@ -10,7 +11,6 @@ import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.io.InputStreamReader
-import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 
@@ -86,7 +86,7 @@ class SourceClient {
     private fun arrayApi(s: Source,a: String): JSONArray = try { JSONArray(fetch(api(s,a)).toString(Charsets.UTF_8)) } catch(e: ImportFailure) { throw e } catch (_: Exception) { throw ImportFailure(ImportFailure.Reason.SERVER) }
     private fun objectApi(s: Source,a: String,k: String="",v: String=""): JSONObject = try { JSONObject(fetch(api(s,a,k,v)).toString(Charsets.UTF_8)) } catch(e: ImportFailure) { throw e } catch (_: Exception) { throw ImportFailure(ImportFailure.Reason.SERVER) }
     companion object {
-        fun id(source: String,key: String) = MessageDigest.getInstance("SHA-256").digest("$source:$key".toByteArray()).joinToString("") { "%02x".format(it) }
+        fun id(source: String,key: String) = ChannelIdentity.id(source,key)
         fun readLimited(input: InputStream,limit: Int): ByteArray {
             val result = java.io.ByteArrayOutputStream(); val buffer = ByteArray(8192)
             while(true) { val count = input.read(buffer); if(count<0) break; if(result.size()+count>limit) throw ImportFailure(ImportFailure.Reason.TOO_LARGE); result.write(buffer,0,count) }

@@ -13,6 +13,8 @@ data class Channel(
     val lastPlayed: Long = 0, val position: Long = 0, val parentId: String = ""
 )
 data class Programme(val title: String, val description: String, val start: Long, val stop: Long)
+data class CatalogFilter(val tab: Int=0,val source: String="",val group: String="",val kind: String="LIVE",val search: String="")
+data class CatalogPage(val channels: List<Channel>,val total: Int,val groups: List<String>)
 class ImportFailure(val reason: Reason) : Exception(reason.name) {
     enum class Reason { INVALID_URL, EMPTY, AUTH, NETWORK, FILE, TOO_LARGE, SERVER, EPG, UNSUPPORTED }
 }

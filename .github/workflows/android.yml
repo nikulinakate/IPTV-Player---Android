@@ -14,8 +14,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Install required Android SDK packages
+        run: |
+          sdk_manager=$(find "$ANDROID_HOME/cmdline-tools" -path '*/bin/sdkmanager' | sort -V | tail -n 1)
+          test -n "$sdk_manager"
+          yes | "$sdk_manager" --licenses > /dev/null || true
+          "$sdk_manager" --install 'platforms;android-36' 'build-tools;35.0.0'
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
       - run: ./gradlew :core:selfTest :app:testDebugUnitTest :app:assembleDebug :app:lintDebug

@@ -10,7 +10,8 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /** Secrets stay on this device; database/credentials are deliberately excluded from backups. */
-class SecretVault {
+interface TextVault { fun seal(value: String): String;fun open(value: String): String }
+class SecretVault : TextVault {
     private val key: SecretKey by lazy {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey("iptv_sources_v1", null) as? SecretKey) ?: KeyGenerator.getInstance("AES", "AndroidKeyStore").run {
@@ -19,11 +20,11 @@ class SecretVault {
             generateKey()
         }
     }
-    fun seal(value: String): String {
+    override fun seal(value: String): String {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
         return Base64.encodeToString(cipher.iv + cipher.doFinal(value.toByteArray(Charsets.UTF_8)), Base64.NO_WRAP)
     }
-    fun open(value: String): String {
+    override fun open(value: String): String {
         val bytes = Base64.decode(value, Base64.NO_WRAP)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
             init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, bytes.copyOfRange(0, 12)))

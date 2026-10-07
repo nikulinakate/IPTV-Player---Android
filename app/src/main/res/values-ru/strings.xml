@@ -108,4 +108,14 @@
     <string name="audio">Звук</string>
     <string name="subtitles">Субтитры</string>
     <string name="quality">Качество</string>
+    <string name="previous_channel">Предыдущий канал в этой группе</string>
+    <string name="next_channel">Следующий канал в этой группе</string>
+    <string name="playback_access">Доступ отклонён. Проверьте аккаунт провайдера, подписку и лимит подключений.</string>
+    <string name="playback_not_found">Поток больше не доступен. Обновите плейлист или обратитесь к провайдеру.</string>
+    <string name="playback_format">Устройство не поддерживает формат или кодек потока. Попробуйте другое качество или внешний плеер.</string>
+    <string name="playback_drm">Для потока требуется лицензия DRM, которую плеер не может получить.</string>
+    <string name="playback_file">Файл недоступен. Выберите его снова и проверьте разрешение на доступ.</string>
+    <string name="waiting_for_network">Ожидание подключения к сети…</string>
+    <string name="reconnecting">Переподключение… попытка %1$d из %2$d</string>
+    <string name="cancel_reconnect">Отменить переподключение</string>
 </resources>

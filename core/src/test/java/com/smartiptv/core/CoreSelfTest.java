@@ -41,6 +41,12 @@ public final class CoreSelfTest {
         eq(XmlTvParser.parse(new ByteArrayInputStream(xxe.getBytes(StandardCharsets.UTF_8)),now).size(),0,"external entities disabled");
         var large=new StringBuilder("#EXTM3U\n");for(int i=0;i<20_000;i++) large.append("#EXTINF:-1 group-title=\"Group ").append(i%10).append("\",Channel ").append(i).append("\nhttps://example.com/").append(i).append(".m3u8\n");
         eq(PlaylistParser.parse(new StringReader(large.toString()),null).channels.size(),20_000,"large provider catalogue");
+        eq(ChannelIdentity.id("source","https://example.com/live"),"ec60009772b58b0d73516768c865f1bf0c3c726032159a12987d774142457473","identity remains compatible with existing favorites");
+        RetryPolicy retry=new RetryPolicy();
+        for(long expected: new long[]{1000,2000,4000,8000,16000}) eq(retry.nextDelayMs(),expected,"bounded backoff");
+        eq(retry.nextDelayMs(),-1L,"retry exhausted");retry.reset();eq(retry.nextDelayMs(),1000L,"explicit retry reset");
+        eq(RetryPolicy.retryHttp(401),false,"auth not retried");eq(RetryPolicy.retryHttp(404),false,"missing URL not retried");
+        eq(RetryPolicy.retryHttp(429),true,"rate limit retry");eq(RetryPolicy.retryHttp(503),true,"temporary server retry");
         System.out.println("PASS: "+assertions+" parser, URL, EPG and 20,000-channel assertions");
     }
     private static void eq(Object actual,Object expected,String message) {

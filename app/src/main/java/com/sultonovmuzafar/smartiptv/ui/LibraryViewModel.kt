@@ -16,7 +16,8 @@ data class LibraryState(
     val sources: List<Source> = emptyList(), val channels: List<Channel> = emptyList(),
     val busy: Boolean = false, val ready: Boolean = false, val error: ImportFailure.Reason? = null,
     val message: String? = null, val episodes: List<Channel>? = null,
-    val schedule: List<Programme>? = null, val guideChannel: Channel? = null
+    val schedule: List<Programme>? = null, val guideChannel: Channel? = null,
+    val total: Int=0,val groups: List<String> = emptyList(),val catalogLoading: Boolean=false
 )
 class LibraryViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as IPTVApplication
@@ -24,6 +25,9 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private val client = app.sources
     private val mutable = MutableStateFlow(LibraryState())
     val state = mutable.asStateFlow()
+    private var catalogFilter=CatalogFilter()
+    private var catalogJob: Job?=null
+    private var catalogGeneration=0L
     init { reload() }
     fun reload() = viewModelScope.launch {
         try { load() }
@@ -32,8 +36,35 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     }
     private suspend fun load() {
         val sources = withContext(Dispatchers.IO) { db.sources() }
-        val channels = withContext(Dispatchers.IO) { db.channels() }
-        mutable.value = mutable.value.copy(sources=sources,channels=channels,ready=true)
+        mutable.value = mutable.value.copy(sources=sources,ready=true)
+        queryCatalog()
+    }
+    fun setFilter(filter: CatalogFilter) {
+        if(filter==catalogFilter) return
+        val typing=filter.search!=catalogFilter.search
+        catalogFilter=filter
+        queryCatalog(debounce=typing)
+    }
+    fun loadMore() {
+        if(mutable.value.catalogLoading || mutable.value.channels.size>=mutable.value.total) return
+        queryCatalog(append=true)
+    }
+    private fun queryCatalog(append: Boolean=false,debounce: Boolean=false) {
+        catalogJob?.cancel()
+        val generation=++catalogGeneration
+        val filter=catalogFilter
+        val offset=if(append) mutable.value.channels.size else 0
+        mutable.value=mutable.value.copy(catalogLoading=true)
+        catalogJob=viewModelScope.launch {
+            try {
+                if(debounce) delay(180)
+                val page=withContext(Dispatchers.IO) { db.catalog(filter,offset) }
+                if(generation==catalogGeneration) mutable.value=mutable.value.copy(
+                    channels=if(append) (mutable.value.channels+page.channels).distinctBy { it.id } else page.channels,
+                    total=page.total,groups=page.groups,catalogLoading=false)
+            } catch(e: CancellationException) { throw e }
+            catch (_: Exception) { if(generation==catalogGeneration) mutable.value=mutable.value.copy(catalogLoading=false,error=ImportFailure.Reason.FILE) }
+        }
     }
     private fun operation(block: suspend () -> Unit) {
         if(mutable.value.busy) return
@@ -93,11 +124,13 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     fun remove(source: Source) = operation { db.remove(source.id) }
     fun favorite(channel: Channel) = viewModelScope.launch {
         withContext(Dispatchers.IO) { db.favorite(channel.id,!channel.favorite) }
-        mutable.value=mutable.value.copy(channels=mutable.value.channels.map { if(it.id==channel.id) it.copy(favorite=!channel.favorite) else it })
+        if(catalogFilter.tab==1 && channel.favorite) {
+            mutable.value=mutable.value.copy(channels=mutable.value.channels.filterNot { it.id==channel.id },total=(mutable.value.total-1).coerceAtLeast(0))
+        } else mutable.value=mutable.value.copy(channels=mutable.value.channels.map { if(it.id==channel.id) it.copy(favorite=!channel.favorite) else it })
     }
     fun openSeries(series: Channel) = operation {
         val source = db.sources().first { it.id==series.sourceId }
-        val cached = db.channels().filter { it.parentId==series.id }
+        val cached = db.episodes(series.id)
         val episodes = cached.ifEmpty { client.episodes(source,series).also { db.save(source,it,replace=false) } }
         mutable.value=mutable.value.copy(episodes=episodes)
     }
